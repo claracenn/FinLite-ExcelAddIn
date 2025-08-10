@@ -1,0 +1,15 @@
+{
+  "MODEL_PATH": "models/granite-3.3-8b-instruct-Q4_K_S.gguf",
+  "LLM_PARAMS": {
+    "n_ctx": 2048,
+    "n_threads": 4,
+    "n_batch": 64,
+    "max_tokens": 256,
+    "stop": ["</s>"]
+  },
+  "EMBEDDING_MODEL": "models/all-MiniLM-L6-v2",
+  "INDEX_PATH": "index.pkl",
+  "EXCEL_FILE": "Sample_Financial_Data.xlsx",
+  "K": 5,
+  "LOG_JSONL": "logs/requests.jsonl"
+}

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fluent Chat for Excel</title>
+  <script type="module" src="https://unpkg.com/@fluentui/web-components"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root { --pad: 10px; }
+    body { margin:0; font-family: Segoe UI, system-ui, sans-serif; }
+    .app { display:flex; flex-direction:column; height:100vh; }
+
+    /* Top Bar */
+    .topbar {
+      display:flex; gap:8px; align-items:center;
+      padding:8px var(--pad);
+      border-bottom:1px solid #e5e5e5;
+    }
+    .grow { flex:1; }
+
+    /* Layout */
+    .content {
+      display:grid;
+      grid-template-rows: 1fr auto auto;
+      gap:8px;
+      padding:var(--pad);
+      height:100%;
+      box-sizing:border-box;
+    }
+    .row { display:flex; gap:8px; align-items:center; }
+
+    /* History */
+    .answer {
+      overflow:auto;
+      border:none;
+      background:transparent;
+      padding:0;
+    }
+
+    /* Selection */
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      white-space:pre-wrap;
+      background:rgba(0,0,0,.03);
+      padding:8px; border-radius:8px;
+      height:80px;
+      overflow:auto;
+    }
+
+    /* ===== Prompt ===== */
+    .prompt-card { padding:2px; }   
+    .prompt-wrap { position: relative; }
+    #prompt { display:block; width:100%; }
+    #prompt {
+      --neutral-stroke-input-rest: transparent;
+      --neutral-stroke-input-hover: transparent;
+      --neutral-stroke-input-focus: transparent;
+      --neutral-stroke-input-active: transparent;
+      --focus-stroke-outer: transparent;
+      --focus-stroke-inner: transparent;
+      --neutral-fill-input-rest: transparent;
+    }
+    #prompt::part(control) {
+      min-height:40px;
+      height:56px;                 
+      box-sizing:border-box;
+      padding-right:140px;         
+      border:none !important;
+      box-shadow:none !important;
+      background:transparent;
+      outline:none;
+      resize:none;               
+    }
+
+    /* Button */
+    .send-btn { position:absolute; right:12px;  bottom:12px; z-index:5; }
+    .mic-btn  { position:absolute; right:70px; bottom:12px; z-index:5; }
+
+    /* Loading */
+    #spinner { width:14px; height:14px; position:absolute; right:120px; bottom:20px; }
+    .hidden { display:none; }
+
+    /* toast */
+    .toast {
+      position:fixed; bottom:12px; right:12px;
+      background:#000; color:#fff; padding:8px 12px;
+      border-radius:6px; opacity:.9;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <!-- Topbar: Verbosity + Help -->
+  <div class="topbar">
+    <h4 class="grow" style="margin:4px 0;">FinLite Assistant</h4>
+
+    <fluent-select id="verbosity" appearance="outline" style="min-width:140px">
+      <fluent-option value="Concise" selected>Concise</fluent-option>
+      <fluent-option value="Detailed">Detailed</fluent-option>
+    </fluent-select>
+
+    <fluent-button id="helpBtn" appearance="accent" title="Help">?</fluent-button>
+  </div>
+
+  <div class="content">
+    <!-- 1) History -->
+    <fluent-card style="display:flex; flex-direction:column; min-height:160px;">
+      <div style="font-weight:600; margin-bottom:6px;">History</div>
+      <div id="ans" class="answer"></div>
+    </fluent-card>
+
+    <!-- 2) Selection Preview -->
+    <fluent-card>
+      <div style="font-weight:600;margin-bottom:6px;">Selection preview</div>
+      <div id="sel" class="mono">(no selection)</div>
+    </fluent-card>
+
+    <!-- 3) Prompt -->
+    <fluent-card class="prompt-card">
+      <div class="prompt-wrap" style="font-size: 1em;">
+        <fluent-text-area id="prompt"
+          placeholder="Type a question... (Enter to send, Ctrl+Enter for newline)"
+          style="font-size: 1em;">
+        </fluent-text-area>
+
+        <fluent-progress-ring id="spinner" class="hidden"></fluent-progress-ring>
+        <fluent-button id="micBtn"  appearance="stealth" class="mic-btn" title="Hold to talk">🎤</fluent-button>
+        <fluent-button id="sendBtn" appearance="accent"  class="send-btn">Enter</fluent-button>
+      </div>
+    </fluent-card>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>

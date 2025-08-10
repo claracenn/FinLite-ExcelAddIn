@@ -1,0 +1,16 @@
+nuitka --standalone --follow-imports ^
+  --include-package=pandas ^
+  --include-package=openpyxl ^
+  --include-package=numpy ^
+  --include-package=sentence_transformers ^
+  --include-package=torch ^
+  --include-package=transformers ^
+  --include-package=faiss ^
+  --include-package=llama_cpp ^
+  --include-package=fastapi ^
+  --include-package=uvicorn ^
+  --include-package=pydantic ^
+  --include-data-file=app\config.json=config.json ^
+  --include-data-file=app\index.pkl=index.pkl ^
+  --include-data-file=app\Sample_Financial_Data.xlsx=Sample_Financial_Data.xlsx ^
+  app\run_server.py
