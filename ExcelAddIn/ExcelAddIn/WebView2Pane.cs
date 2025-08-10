@@ -85,6 +85,46 @@ namespace ExcelAddIn
                             PostToWeb(new JObject { ["type"] = "toast", ["message"] = "help.html not found" });
                         break;
                     }
+                case "history":
+                    {
+                        // GET /history?limit=5
+                        try
+                        {
+                            var resp = await _http.GetAsync("/history?limit=5");
+                            resp.EnsureSuccessStatusCode();
+                            var json = await resp.Content.ReadAsStringAsync();
+                            PostToWeb(new JObject {
+                                ["type"] = "history-data",
+                                ["items"] = JArray.Parse(json)
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            PostToWeb(new JObject { ["type"] = "history-error", ["message"] = ex.Message });
+                        }
+                        break;
+                    }
+                    case "history-item":
+                    {
+                        // GET /history/{id}
+                        try
+                        {
+                            var id = (int?)msg["id"] ?? -1;
+                            if (id < 0) throw new Exception("invalid id");
+                            var resp = await _http.GetAsync($"/history/{id}");
+                            resp.EnsureSuccessStatusCode();
+                            var json = await resp.Content.ReadAsStringAsync();
+                            PostToWeb(new JObject {
+                                ["type"] = "history-item-data",
+                                ["item"] = JObject.Parse(json)
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            PostToWeb(new JObject { ["type"] = "history-error", ["message"] = ex.Message });
+                        }
+                        break;
+                    }
             }
         }
 
@@ -106,7 +146,7 @@ namespace ExcelAddIn
 
             var effective = verbosity == "Concise"
                 ? $"Please answer concisely: {prompt}"
-                : $"Please provide a detailed answer: {prompt}";
+                : $"Please answer detailedly: {prompt}";
 
             var payload = new JObject { ["prompt"] = effective };
             if (!string.IsNullOrWhiteSpace(_lastSelection))

@@ -14,67 +14,68 @@
 
     /* Top Bar */
     .topbar {
-      display:flex; gap:8px; align-items:center;
-      padding:8px var(--pad);
-      border-bottom:1px solid #e5e5e5;
+        display:flex; gap:8px; align-items:center;
+        padding:8px var(--pad);
+        border-bottom:1px solid #e5e5e5;
+        position: relative;
     }
     .grow { flex:1; }
 
     /* Layout */
     .content {
-      display:grid;
-      grid-template-rows: 1fr auto auto;
-      gap:8px;
-      padding:var(--pad);
-      height:100%;
-      box-sizing:border-box;
+        display:grid;
+        grid-template-rows: 1fr auto auto;
+        gap:8px;
+        padding:var(--pad);
+        height:100%;
+        box-sizing:border-box;
     }
     .row { display:flex; gap:8px; align-items:center; }
 
-    /* History */
+    /* Chat History */
     .answer {
-      overflow:auto;
-      border:none;
-      background:transparent;
-      padding:0;
+        overflow:auto;
+        border:none;
+        background:transparent;
+        padding:0;
     }
 
     /* Selection */
     .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      white-space:pre-wrap;
-      background:rgba(0,0,0,.03);
-      padding:8px; border-radius:8px;
-      height:80px;
-      overflow:auto;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        white-space:pre-wrap;
+        background:rgba(0,0,0,.03);
+        padding:8px; border-radius:8px;
+        height:80px;
+        overflow:auto;
     }
 
-    /* ===== Prompt ===== */
+    /* Prompt */
     .prompt-card { padding:2px; }   
     .prompt-wrap { position: relative; }
     #prompt { display:block; width:100%; }
     #prompt {
-      --neutral-stroke-input-rest: transparent;
-      --neutral-stroke-input-hover: transparent;
-      --neutral-stroke-input-focus: transparent;
-      --neutral-stroke-input-active: transparent;
-      --focus-stroke-outer: transparent;
-      --focus-stroke-inner: transparent;
-      --neutral-fill-input-rest: transparent;
+        --neutral-stroke-input-rest: transparent;
+        --neutral-stroke-input-hover: transparent;
+        --neutral-stroke-input-focus: transparent;
+        --neutral-stroke-input-active: transparent;
+        --focus-stroke-outer: transparent;
+        --focus-stroke-inner: transparent;
+        --neutral-fill-input-rest: transparent;
     }
     #prompt::part(control) {
-      min-height:40px;
-      height:56px;                 
-      box-sizing:border-box;
-      padding-right:140px;         
-      border:none !important;
-      box-shadow:none !important;
-      background:transparent;
-      outline:none;
-      resize:none;               
+        min-height:40px;
+        height:56px;                 
+        box-sizing:border-box;
+        padding-right:140px;         
+        border:none !important;
+        box-shadow:none !important;
+        background:transparent;
+        outline:none;
+        resize:none;               
     }
 
-    /* Button */
+    /* Prompt Button */
     .send-btn { position:absolute; right:12px;  bottom:12px; z-index:5; }
     .mic-btn  { position:absolute; right:70px; bottom:12px; z-index:5; }
 
@@ -82,15 +83,98 @@
     #spinner { width:14px; height:14px; position:absolute; right:120px; bottom:20px; }
     .hidden { display:none; }
 
+    /* History Popover */
+    .history-popover {
+        position: absolute;
+        top: 40px;
+        right: 8px;
+        width: 320px; /* was 280; optional, gives more room */
+        max-height: 360px;
+        overflow: auto;
+        background: var(--neutral-layer-1, #fff);
+        border: 1px solid #e5e5e5;
+        border-radius: 10px;
+        box-shadow: 0 10px 28px rgba(0,0,0,.12);
+        z-index: 1000;
+    }
+
+    .history-popover-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 10px;
+        border-bottom: 1px solid #eee;
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .history-list {
+        display: flex;
+        flex-direction: column;
+        padding: 6px;
+        gap: 4px;
+    }
+
+    .history-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .history-item:hover {
+        background: rgba(37,99,235,.08);
+    }
+
+    .history-item-title {
+        min-width: 0;
+        font-size: 12px;
+        line-height: 1.35;
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* show up to 2 lines */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .history-item-time {
+        font-size: 11px;
+        opacity: .6;
+        white-space: nowrap;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .history-popover {
+            background: #0f1115;
+            border-color: #23262b;
+            box-shadow: 0 10px 28px rgba(0,0,0,.5);
+        }
+
+        .history-item-title {
+            color: #e5e7eb;
+        }
+
+        .history-item:hover {
+            background: rgba(37,99,235,.18);
+        }
+    }
+
     /* toast */
     .toast {
-      position:fixed; bottom:12px; right:12px;
-      background:#000; color:#fff; padding:8px 12px;
-      border-radius:6px; opacity:.9;
+        position:fixed; bottom:12px; right:12px;
+        background:#000; color:#fff; padding:8px 12px;
+        border-radius:6px; opacity:.9;
     }
   </style>
 </head>
 <body>
+
+
 <div class="app">
   <!-- Topbar: Verbosity + Help -->
   <div class="topbar">
@@ -101,23 +185,26 @@
       <fluent-option value="Detailed">Detailed</fluent-option>
     </fluent-select>
 
+    <fluent-button id="newChatBtn" appearance="stealth" title="New chat">＋</fluent-button>
+    <fluent-button id="historyBtn" appearance="stealth" title="History">🕒</fluent-button>
+
     <fluent-button id="helpBtn" appearance="accent" title="Help">?</fluent-button>
   </div>
 
   <div class="content">
-    <!-- 1) History -->
+    <!-- Chat History -->
     <fluent-card style="display:flex; flex-direction:column; min-height:160px;">
       <div style="font-weight:600; margin-bottom:6px;">History</div>
       <div id="ans" class="answer"></div>
     </fluent-card>
 
-    <!-- 2) Selection Preview -->
+    <!-- Selection Preview -->
     <fluent-card>
       <div style="font-weight:600;margin-bottom:6px;">Selection preview</div>
       <div id="sel" class="mono">(no selection)</div>
     </fluent-card>
 
-    <!-- 3) Prompt -->
+    <!-- Prompt -->
     <fluent-card class="prompt-card">
       <div class="prompt-wrap" style="font-size: 1em;">
         <fluent-text-area id="prompt"
@@ -130,6 +217,15 @@
         <fluent-button id="sendBtn" appearance="accent"  class="send-btn">Enter</fluent-button>
       </div>
     </fluent-card>
+
+    <!-- History popover -->
+    <div id="historyPopover" class="history-popover" hidden>
+      <div class="history-popover-header">
+        <span>Recent Chats</span>
+      </div>
+      <div id="historyList" class="history-list">
+      </div>
+    </div>
   </div>
 </div>
 

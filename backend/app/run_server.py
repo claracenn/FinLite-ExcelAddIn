@@ -16,9 +16,10 @@ sys.path.insert(0, str(BASE / "src"))
 
 import traceback
 import re
-from typing import List, Optional
-
+import json
 import pandas as pd
+from typing import Dict, List, Optional
+from collections import deque
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
@@ -28,7 +29,7 @@ from table_main    import rag_pipeline
 from llm_embedding import build_index
 from table_linearizer import linearize
 from llm_generating import generate_answer
-from save_jsonl import save_interaction
+from save_jsonl import LOG_PATH, save_interaction
 
 app = FastAPI(title="ExcelRAG Service")
 
@@ -81,6 +82,51 @@ async def chat(req: ChatRequest):
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+@app.get("/history")
+def get_history(limit: int = 5) -> List[Dict]:
+    if not LOG_PATH.exists():
+        return []  # no history yet
+    buf = deque(maxlen=limit)
+    with open(LOG_PATH, "r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            try:
+                rec = json.loads(line)
+                rec["_id"] = i
+                buf.append(rec)
+            except Exception:
+                continue
+    items = list(buf)
+    items.reverse()
+    return [
+        {
+            "id": it.get("_id"),
+            "title": _title_from_prompt(it.get("prompt", "")),
+            "prompt": it.get("prompt", ""),
+            "timestamp": it.get("timestamp", ""),
+        }
+        for it in items
+    ]
+
+@app.get("/history/{item_id}")
+def get_history_item(item_id: int) -> Dict:
+    if not LOG_PATH.exists():
+        raise HTTPException(status_code=404, detail="No history")
+    with open(LOG_PATH, "r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            if i == item_id:
+                try:
+                    rec = json.loads(line)
+                    rec["_id"] = i
+                    return rec
+                except Exception:
+                    break
+    raise HTTPException(status_code=404, detail="Not found")
+
+
+def _title_from_prompt(p: str, limit: int = 50) -> str:
+    p = (p or "").strip().replace("\n", " ")
+    return (p[:limit] + "…") if len(p) > limit else (p or "New Chat")
 
 def trim_to_first_answer(text: str) -> str:
     parts = re.split(r"\n?(?:Question:|Selected range)", text, maxsplit=1)
