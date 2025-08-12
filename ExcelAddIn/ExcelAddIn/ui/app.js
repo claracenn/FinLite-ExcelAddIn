@@ -10,6 +10,8 @@ const historyBtn = document.getElementById('historyBtn');
 const historyPopover = document.getElementById('historyPopover');
 const historyList = document.getElementById('historyList');
 const newChatBtn = document.getElementById('newChatBtn');
+const aboutBtn = document.getElementById('aboutBtn');
+const aboutPopover = document.getElementById('aboutPopover');
 
 const history = [];
 let thinkingIndex = -1;
@@ -104,6 +106,14 @@ function toggleHistoryPopover() {
   }
 }
 
+function toggleAboutPopover() {
+  if (!aboutPopover) return;
+  // Hide history popover if open
+  if (!historyPopover?.hidden) historyPopover.hidden = true;
+  // Toggle about popover
+  aboutPopover.hidden = !aboutPopover.hidden;
+}
+
 function fmtShortTime(ms) {
   const d = new Date(ms);
   const now = new Date();
@@ -188,21 +198,38 @@ historyBtn?.addEventListener('click', (e) => {
   toggleHistoryPopover();
 });
 
+aboutBtn?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleAboutPopover();
+});
+
 newChatBtn?.addEventListener('click', () => {
   if (!historyPopover?.hidden) historyPopover.hidden = true;
+  if (!aboutPopover?.hidden) aboutPopover.hidden = true;
   startNewConversation();
 });
 
 document.addEventListener('pointerdown', (e) => {
-  if (!historyPopover || historyPopover.hidden) return;
-  if (!historyPopover.contains(e.target) && e.target !== historyBtn) {
+  if (!historyPopover?.hidden && !historyPopover.contains(e.target) && e.target !== historyBtn) {
     historyPopover.hidden = true;
   }
+  if (!aboutPopover?.hidden && !aboutPopover.contains(e.target) && e.target !== aboutBtn) {
+    aboutPopover.hidden = true;
+  }
 });
-window.addEventListener('scroll', () => { if (!historyPopover.hidden) historyPopover.hidden = true; }, { passive: true });
-window.addEventListener('resize', () => { if (!historyPopover.hidden) historyPopover.hidden = true; });
+window.addEventListener('scroll', () => { 
+  if (!historyPopover?.hidden) historyPopover.hidden = true; 
+  if (!aboutPopover?.hidden) aboutPopover.hidden = true; 
+}, { passive: true });
+window.addEventListener('resize', () => { 
+  if (!historyPopover?.hidden) historyPopover.hidden = true; 
+  if (!aboutPopover?.hidden) aboutPopover.hidden = true; 
+});
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !historyPopover?.hidden) historyPopover.hidden = true;
+  if (e.key === 'Escape') {
+    if (!historyPopover?.hidden) historyPopover.hidden = true;
+    if (!aboutPopover?.hidden) aboutPopover.hidden = true;
+  }
 });
 
 
@@ -229,7 +256,13 @@ web?.addEventListener('message', (ev) => {
                 break;
             case 'selection': {
                 const t = (msg.text || '').trim();
-                selEl.textContent = t ? t : '(no selection)';
+                if (t) {
+                    selEl.textContent = t;
+                    selEl.classList.remove('no-selection');
+                } else {
+                    selEl.textContent = '(no selection)';
+                    selEl.classList.add('no-selection');
+                }
                 break;
             }
             case 'thinking': {
@@ -266,6 +299,7 @@ web?.addEventListener('message', (ev) => {
                 thinkingIndex = -1;
                 ansEl.innerHTML = '';
                 selEl.textContent = '(no selection)';
+                selEl.classList.add('no-selection');
                 setSpinner(false);
                 break;
             }

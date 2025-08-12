@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fluent Chat for Excel</title>
+  <title>FinLite Assistant</title>
   <script type="module" src="https://unpkg.com/@fluentui/web-components"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
@@ -20,6 +20,11 @@
         position: relative;
     }
     .grow { flex:1; }
+
+    /* Verbosity dropdown */
+    #verbosity {
+        font-size: 10px;
+    }
 
     /* Layout */
     .content {
@@ -48,6 +53,12 @@
         padding:8px; border-radius:8px;
         height:80px;
         overflow:auto;
+    }
+    
+    .mono.no-selection {
+        font-family: Segoe UI, system-ui, sans-serif;
+        color: #888;
+        font-style: italic;
     }
 
     /* Prompt */
@@ -84,7 +95,7 @@
     .hidden { display:none; }
 
     /* History Popover */
-    .history-popover {
+    .history-popover, .about-popover {
         position: absolute;
         top: 40px;
         right: 8px;
@@ -98,7 +109,12 @@
         z-index: 1000;
     }
 
-    .history-popover-header {
+    .about-popover {
+        width: 400px;
+        max-height: 500px;
+    }
+
+    .history-popover-header, .about-popover-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -106,6 +122,40 @@
         border-bottom: 1px solid #eee;
         font-weight: 600;
         font-size: 13px;
+    }
+
+    .about-content {
+        padding: 16px;
+        line-height: 1.6;
+        font-size: 13px;
+    }
+
+    .about-main-text {
+        margin: 0 0 16px 0;
+        color: #333;
+        font-weight: 400;
+    }
+
+    .about-credit {
+        margin: 16px 0 0 0;
+        padding: 8px 0;
+        border-top: 1px solid #e0e0e0;
+        font-size: 11px;
+        color: #888;
+        text-align: center;
+        font-style: italic;
+        letter-spacing: 0.3px;
+    }
+
+    .about-content h3 {
+        margin: 0 0 8px 0;
+        color: #2c3e50;
+        font-size: 14px;
+    }
+
+    .about-content p {
+        margin: 0 0 8px 0;
+        color: #555;
     }
 
     .history-list {
@@ -149,7 +199,7 @@
     }
 
     @media (prefers-color-scheme: dark) {
-        .history-popover {
+        .history-popover, .about-popover {
             background: #0f1115;
             border-color: #23262b;
             box-shadow: 0 10px 28px rgba(0,0,0,.5);
@@ -161,6 +211,27 @@
 
         .history-item:hover {
             background: rgba(37,99,235,.18);
+        }
+
+        .about-content h3 {
+            color: #e5e7eb;
+        }
+
+        .about-content p {
+            color: #d1d5db;
+        }
+
+        .about-main-text {
+            color: #e5e7eb;
+        }
+
+        .about-credit {
+            color: #9ca3af;
+            border-top-color: #374151;
+        }
+
+        .mono.no-selection {
+            color: #9ca3af;
         }
     }
 
@@ -185,10 +256,30 @@
       <fluent-option value="Detailed">Detailed</fluent-option>
     </fluent-select>
 
-    <fluent-button id="newChatBtn" appearance="stealth" title="New chat">＋</fluent-button>
-    <fluent-button id="historyBtn" appearance="stealth" title="History">🕒</fluent-button>
+    <fluent-button id="newChatBtn" appearance="stealth" title="New chat">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+      </svg>
+    </fluent-button>
+    <fluent-button id="historyBtn" appearance="stealth" title="History">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 3.5a4.5 4.5 0 0 0-4.5 4.5.5.5 0 0 1-1 0 5.5 5.5 0 1 1 5.5 5.5H8a.5.5 0 0 1 0-1h.5A4.5 4.5 0 1 0 8 3.5z"/>
+        <path d="M7.5 7.5v2.207l1.147.853a.5.5 0 0 1-.554.832L6.5 10.207V7.5a.5.5 0 0 1 1 0z"/>
+      </svg>
+    </fluent-button>
+    <fluent-button id="aboutBtn" appearance="stealth" title="About">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+        <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+      </svg>
+    </fluent-button>
 
-    <fluent-button id="helpBtn" appearance="accent" title="Help">?</fluent-button>
+    <fluent-button id="helpBtn" appearance="accent" title="Help">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+        <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+      </svg>
+    </fluent-button>
   </div>
 
   <div class="content">
@@ -201,7 +292,7 @@
     <!-- Selection Preview -->
     <fluent-card>
       <div style="font-weight:600;margin-bottom:6px;">Selection preview</div>
-      <div id="sel" class="mono">(no selection)</div>
+      <div id="sel" class="mono no-selection">(no selection)</div>
     </fluent-card>
 
     <!-- Prompt -->
@@ -213,8 +304,17 @@
         </fluent-text-area>
 
         <fluent-progress-ring id="spinner" class="hidden"></fluent-progress-ring>
-        <fluent-button id="micBtn"  appearance="stealth" class="mic-btn" title="Hold to talk">🎤</fluent-button>
-        <fluent-button id="sendBtn" appearance="accent"  class="send-btn">Enter</fluent-button>
+        <fluent-button id="micBtn"  appearance="stealth" class="mic-btn" title="Hold to talk">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
+            <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0v5zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3z"/>
+          </svg>
+        </fluent-button>
+        <fluent-button id="sendBtn" appearance="accent"  class="send-btn">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z"/>
+          </svg>
+        </fluent-button>
       </div>
     </fluent-card>
 
@@ -224,6 +324,17 @@
         <span>Recent Chats</span>
       </div>
       <div id="historyList" class="history-list">
+      </div>
+    </div>
+
+    <!-- About popover -->
+    <div id="aboutPopover" class="about-popover" hidden>
+      <div class="about-popover-header">
+        <span>About</span>
+      </div>
+      <div class="about-content">
+        <div class="about-main-text">FinLite AI for MS Excel, part of the SmolPC collection of AI apps. Developed by Clara Cen, MSc Computer Science, supervised by Prof Dean Mohamedally and Prof Graham Roberts, in collaboration with Intel Corporation.</div>
+        <div class="about-credit">Developed at University College London (c) 2025+</div>
       </div>
     </div>
   </div>

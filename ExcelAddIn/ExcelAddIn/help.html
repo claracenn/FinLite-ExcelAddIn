@@ -11,32 +11,49 @@
         pre { background: #f4f4f4; padding: 1em; border-radius: 4px; overflow-x: auto; }
         .section { margin-bottom: 2em; }
         .footer { font-size: 0.9em; color: #777; text-align: center; margin-top: 3em; }
+        .logos { display: flex; justify-content: center; align-items: center; gap: 2em; margin: 2em 0; }
+        .logo { max-height: 60px; max-width: 120px; opacity: 0.8; }
+        .logo:hover { opacity: 1; }
+        .logo.intel { max-height: 40px; max-width: 80px; }
         a { color: #2980b9; text-decoration: none; }
         a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
-    <h1>FinLite Excel Add-In Help</h1>
+    <h1>FinLite Assistant Add-In Help</h1>
     <div class="section">
         <h2>Introduction</h2>
         <p>FinLite is a VSTO-based Excel add-in that equips with LLM-powered data analysis and question answering.</p>
     </div>
     <div class="section">
         <h2>Using the Add-In</h2>
+        <h3>Core Features</h3>
         <ul>
-            <li><strong>Select Cells:</strong> Select a range in Excel to use as specific context for the chat.</li>
-            <li><strong>No Cells Selected:</strong> All sheets will be used as context for the chat.</li>
-            <li><strong>Ask Questions:</strong> Enter your prompt and click "Enter" button to query the model.</li>
-            <li><strong>Verbosity:</strong> Use the dropdown to choose <em>Concise</em> or <em>Detailed</em> responses.</li>
+            <li><strong>Cell Selection:</strong> Select a range in Excel to use as specific context for your questions. The selected data will appear in the "Selection preview" panel, or leave unselected to use all sheets.</li>
+            <li><strong>Ask Questions:</strong> Type your question in the prompt box and press Enter or click the Send button. Use Ctrl+Enter to add new lines in your question.</li>
+            <li><strong>Chat History:</strong> All questions and answers are saved and displayed in the History panel. Previous conversations can be accessed and reloaded via the History button.</li>
+        </ul>
+        
+        <h3>Interface Controls</h3>
+        <ul>
+            <li><strong>Verbosity Dropdown:</strong> Choose between <em>Concise</em> or <em>Detailed</em> responses to control answer length.</li>
+            <li><strong>New Chat Button (+ icon):</strong> Start a fresh conversation, clearing the chat history.</li>
+            <li><strong>History Button (clock icon):</strong> View and reload previous chat sessions.</li>
+            <li><strong>About Button (i icon):</strong> View information about the add-in and development team.</li>
+            <li><strong>Help Button (? icon):</strong> Open this help documentation.</li>
         </ul>
     </div>
     <div class="section">
         <h2>Contact &amp; Feedback</h2>
-        <p>For issues or suggestions, please email <a href="example@email.com">example@email.com</a>.</p>
+        <p>For issues or suggestions, please email <a href="mailto:baihuicen.24@ucl.ac.uk">baihuicen.24@ucl.ac.uk</a>.</p>
         <p>Source code and docs: <a href="https://example-to-be-replaced.com">GitHub: finlite</a>.</p>
     </div>
     <div class="footer">
         &copy; 2025 UCL
+    </div>
+    <div class="logos">
+        <img src="logo/ucl.png" alt="UCL Logo" class="logo">
+        <img src="logo/intel.png" alt="Intel Logo" class="logo intel">
     </div>
 </body>
 </html>
