@@ -18,6 +18,9 @@ import traceback
 import re
 import json
 import pandas as pd
+import asyncio
+from contextlib import asynccontextmanager
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 from collections import deque
 from fastapi import FastAPI, HTTPException, Request
@@ -31,7 +34,17 @@ from table_linearizer import linearize
 from llm_generating import generate_answer
 from save_jsonl import LOG_PATH, save_interaction
 
-app = FastAPI(title="ExcelRAG Service")
+# Thread pool for blocking operations
+executor = ThreadPoolExecutor(max_workers=2)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    yield
+    # Shutdown
+    executor.shutdown(wait=True)
+
+app = FastAPI(title="ExcelRAG Service", lifespan=lifespan)
 
 CHUNKS: List[str] = []
 
@@ -68,11 +81,24 @@ async def chat(req: ChatRequest):
                 + "\n".join(req.snippets)
                 + f"\n\nQuestion: {req.prompt}\nAnswer:"
             )
-            raw = generate_answer(full_prompt)
+            # Run the blocking LLM generation in a thread pool
+            loop = asyncio.get_event_loop()
+            raw = await loop.run_in_executor(executor, generate_answer, full_prompt)
         else:
-            selected_chunks, raw = rag_pipeline(req.prompt)
+            # Run the entire RAG pipeline in a thread pool
+            loop = asyncio.get_event_loop()
+            selected_chunks, raw = await loop.run_in_executor(executor, rag_pipeline, req.prompt)
+        
         answer = trim_to_first_answer(raw)
-        save_interaction(req.prompt, req.snippets or selected_chunks, answer)
+        
+        # Run the save operation in a thread pool as well (in case it's also blocking)
+        if req.snippets:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(executor, save_interaction, req.prompt, req.snippets, answer)
+        else:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(executor, save_interaction, req.prompt, selected_chunks, answer)
+            
         return ChatResponse(response=answer)
     except Exception as e:
         traceback.print_exc()
