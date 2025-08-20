@@ -1,6 +1,7 @@
 const web = window.chrome?.webview;
 const promptEl = document.getElementById('prompt');
 const sendBtn = document.getElementById('sendBtn');
+const micBtn = document.getElementById('micBtn');
 const ansEl = document.getElementById('ans');
 const selEl = document.getElementById('sel');
 const spinner = document.getElementById('spinner');
@@ -15,6 +16,10 @@ const aboutPopover = document.getElementById('aboutPopover');
 
 const history = [];
 let thinkingIndex = -1;
+let isRecording = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let recognition = null;
 
 function setSpinner(on) {
     if (!spinner || !sendBtn) return;
@@ -181,6 +186,164 @@ function pushToHistory(m) {
   });
 }
 
+// Voice recognition functions
+function initializeVoiceRecognition() {
+  // Try to use Web Speech API first
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true; // Show interim results
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = function() {
+      isRecording = true;
+      updateMicButton();
+    };
+    
+    recognition.onresult = function(event) {
+      const lastResultIndex = event.results.length - 1;
+      const result = event.results[lastResultIndex];
+      
+      if (result.isFinal) {
+        const transcript = result[0].transcript.trim();
+        if (transcript) {
+          // Append to existing text instead of replacing
+          const currentText = promptEl.value.trim();
+          if (currentText) {
+            promptEl.value = currentText + ' ' + transcript;
+          } else {
+            promptEl.value = transcript;
+          }
+          // Auto-stop after getting final result
+          recognition.stop();
+        }
+      }
+    };
+    
+    recognition.onerror = function(event) {
+      console.error('Speech recognition error:', event.error);
+      // Silent error handling - no toast messages
+      isRecording = false;
+      updateMicButton();
+    };
+    
+    recognition.onend = function() {
+      isRecording = false;
+      updateMicButton();
+    };
+  }
+}
+
+function startVoiceRecording() {
+  if (recognition) {
+    // Use Web Speech API
+    try {
+      recognition.start();
+    } catch (error) {
+      console.error('Failed to start speech recognition:', error);
+      // Silent error handling
+    }
+  } else {
+    // Fallback to MediaRecorder for file upload
+    startMediaRecording();
+  }
+}
+
+function stopVoiceRecording() {
+  if (recognition && isRecording) {
+    recognition.stop();
+  } else if (mediaRecorder && isRecording) {
+    stopMediaRecording();
+  }
+}
+
+async function startMediaRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    
+    mediaRecorder.ondataavailable = function(event) {
+      audioChunks.push(event.data);
+    };
+    
+    mediaRecorder.onstop = async function() {
+      const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+      await uploadAudioForTranscription(audioBlob);
+      
+      // Stop all tracks to release microphone
+      stream.getTracks().forEach(track => track.stop());
+    };
+    
+    mediaRecorder.start();
+    isRecording = true;
+    updateMicButton();
+    
+  } catch (error) {
+    console.error('Failed to access microphone:', error);
+    // Silent error handling
+  }
+}
+
+function stopMediaRecording() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop();
+    isRecording = false;
+    updateMicButton();
+  }
+}
+
+async function uploadAudioForTranscription(audioBlob) {
+  try {
+    const formData = new FormData();
+    formData.append('audio_file', audioBlob, 'recording.wav');
+    
+    const response = await fetch('http://127.0.0.1:8000/speech-to-text', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      if (result.text && result.text.trim()) {
+        // Append to existing text instead of replacing
+        const currentText = promptEl.value.trim();
+        if (currentText) {
+          promptEl.value = currentText + ' ' + result.text.trim();
+        } else {
+          promptEl.value = result.text.trim();
+        }
+      }
+    } else {
+      console.error('Transcription failed');
+    }
+  } catch (error) {
+    console.error('Failed to upload audio:', error);
+    // Silent error handling
+  }
+}
+
+function updateMicButton() {
+  if (!micBtn) return;
+  
+  if (isRecording) {
+    micBtn.classList.add('recording');
+    micBtn.title = 'Click to stop recording (or will auto-stop)';
+  } else {
+    micBtn.classList.remove('recording');
+    micBtn.title = 'Click to start voice recording';
+  }
+}
+
+function handleMicClick() {
+  if (isRecording) {
+    stopVoiceRecording();
+  } else {
+    startVoiceRecording();
+  }
+}
+
 
 // UI events
 sendBtn?.addEventListener('click', sendAsk);
@@ -208,6 +371,14 @@ newChatBtn?.addEventListener('click', () => {
   if (!aboutPopover?.hidden) aboutPopover.hidden = true;
   startNewConversation();
 });
+
+// Microphone button event listener
+micBtn?.addEventListener('click', handleMicClick);
+
+// Initialize voice recognition on page load
+document.addEventListener('DOMContentLoaded', initializeVoiceRecognition);
+// Also initialize immediately in case DOMContentLoaded already fired
+initializeVoiceRecognition();
 
 document.addEventListener('pointerdown', (e) => {
   if (!historyPopover?.hidden && !historyPopover.contains(e.target) && e.target !== historyBtn) {

@@ -23,8 +23,12 @@ from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional
 from collections import deque
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from faster_whisper import WhisperModel
+import tempfile
+import shutil
 
 import uvicorn
 
@@ -37,6 +41,17 @@ from save_jsonl import LOG_PATH, save_interaction
 # Thread pool for blocking operations
 executor = ThreadPoolExecutor(max_workers=2)
 
+# Initialize Whisper model for speech recognition
+whisper_model = None
+
+def get_whisper_model():
+    global whisper_model
+    if whisper_model is None:
+        # Use "base" model for good balance of speed and accuracy
+        # You can use "tiny", "base", "small", "medium", "large" based on your needs
+        whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
+    return whisper_model
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -46,6 +61,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ExcelRAG Service", lifespan=lifespan)
 
+# Add CORS middleware to handle cross-origin requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure as needed for security
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 CHUNKS: List[str] = []
 
 class ChatRequest(BaseModel):
@@ -54,6 +78,59 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
+
+class SpeechResponse(BaseModel):
+    text: str
+
+@app.post("/speech-to-text", response_model=SpeechResponse)
+async def speech_to_text(audio_file: UploadFile = File(...)):
+    """
+    Convert speech audio file to text using faster-whisper
+    """
+    try:
+        # Read the uploaded audio file
+        audio_data = await audio_file.read()
+        
+        # Create a temporary file to store the audio
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
+            temp_file.write(audio_data)
+            temp_file_path = temp_file.name
+        
+        try:
+            # Get the Whisper model
+            model = get_whisper_model()
+            
+            # Run transcription in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            
+            def transcribe_audio():
+                segments, info = model.transcribe(temp_file_path, beam_size=5)
+                # Combine all segments into a single text
+                text = ""
+                for segment in segments:
+                    text += segment.text
+                return text.strip()
+            
+            text = await loop.run_in_executor(executor, transcribe_audio)
+            
+            if not text:
+                raise HTTPException(status_code=400, detail="No speech detected in audio")
+            
+            return SpeechResponse(text=text)
+            
+        finally:
+            # Clean up temporary file
+            try:
+                os.unlink(temp_file_path)
+            except:
+                pass
+                
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
 
 @app.post("/initialize")
 async def initialize(req: Request):

@@ -185,7 +185,7 @@
         line-height: 1.35;
         white-space: normal;
         display: -webkit-box;
-        -webkit-line-clamp: 2; /* show up to 2 lines */
+        -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
         overflow-wrap: anywhere;
@@ -237,9 +237,119 @@
 
     /* toast */
     .toast {
-        position:fixed; bottom:12px; right:12px;
-        background:#000; color:#fff; padding:8px 12px;
-        border-radius:6px; opacity:.9;
+        position:fixed; 
+        bottom:12px; 
+        left:12px;  /* Changed from right to left */
+        background:#000; 
+        color:#fff; 
+        padding:8px 12px;
+        border-radius:6px; 
+        opacity:.9;
+        z-index: 1000;
+        max-width: 300px;
+        word-wrap: break-word;
+    }
+    
+    .toast.bottom-left {
+        bottom: 12px;
+        left: 12px;
+        right: auto;
+    }
+    
+    .toast.bottom-center {
+        bottom: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        right: auto;
+    }
+
+    /* Microphone button styles - Force override FluentUI */
+    fluent-button#micBtn,
+    fluent-button.mic-btn,
+    #micBtn {
+        opacity: 1 !important;
+        background: transparent !important;
+        border: none !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    fluent-button#micBtn svg,
+    fluent-button.mic-btn svg,
+    #micBtn svg {
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: inline-block !important;
+        color: currentColor !important;
+        fill: currentColor !important;
+    }
+    
+    /* Recording state */
+    fluent-button#micBtn.recording,
+    fluent-button.mic-btn.recording,
+    #micBtn.recording {
+        background: transparent !important;
+        background-color: transparent !important;
+        color: #0078d4 !important;
+        opacity: 1 !important;
+        animation: micIconPulse 1s infinite !important;
+        border: none !important;
+        transform: scale(1.2) !important;
+    }
+    
+    fluent-button#micBtn.recording svg,
+    fluent-button.mic-btn.recording svg,
+    #micBtn.recording svg {
+        color: #0078d4 !important;
+        fill: #0078d4 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        filter: drop-shadow(0 0 8px rgba(0, 120, 212, 0.6)) !important;
+        animation: micGlow 1s infinite !important;
+    }
+    
+    @keyframes micIconPulse {
+        0% { 
+            transform: scale(1.2) !important;
+        }
+        50% { 
+            transform: scale(1.3) !important;
+        }
+        100% { 
+            transform: scale(1.2) !important;
+        }
+    }
+    
+    @keyframes micGlow {
+        0% { 
+            color: #0078d4 !important;
+            fill: #0078d4 !important;
+            filter: drop-shadow(0 0 8px rgba(0, 120, 212, 0.6)) !important;
+        }
+        50% { 
+            color: #106ebe !important;
+            fill: #106ebe !important;
+            filter: drop-shadow(0 0 12px rgba(0, 120, 212, 0.9)) !important;
+        }
+        100% { 
+            color: #0078d4 !important;
+            fill: #0078d4 !important;
+            filter: drop-shadow(0 0 8px rgba(0, 120, 212, 0.6)) !important;
+        }
+    }
+    
+    fluent-button#micBtn:hover,
+    fluent-button.mic-btn:hover,
+    #micBtn:hover {
+        transform: scale(1.05) !important;
+        opacity: 1 !important;
+    }
+    
+    fluent-button#micBtn.recording:hover,
+    fluent-button.mic-btn.recording:hover,
+    #micBtn.recording:hover {
+        transform: scale(1.15) !important;
+        cursor: pointer !important;
+        opacity: 1 !important;
     }
   </style>
 </head>
