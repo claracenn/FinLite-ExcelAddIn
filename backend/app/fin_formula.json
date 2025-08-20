@@ -1,0 +1,173 @@
+{
+  "NPV": {
+    "formula": "=NPV(discount_rate,cashflows)",
+    "description": "Net Present Value calculates the present value of future cash flows discounted at a specific rate"
+  },
+  "XNPV": {
+    "formula": "=XNPV(discount_rate,cashflows,dates)",
+    "description": "Extended Net Present Value for irregular cash flow dates"
+  },
+  "IRR": {
+    "formula": "=IRR(cashflows)",
+    "description": "Internal Rate of Return finds the discount rate that makes NPV equal to zero"
+  },
+  "XIRR": {
+    "formula": "=XIRR(cashflows,dates)",
+    "description": "Extended Internal Rate of Return for irregular cash flow dates"
+  },
+  "MIRR": {
+    "formula": "=MIRR(cashflows,finance_rate,reinvest_rate)",
+    "description": "Modified Internal Rate of Return accounting for different financing and reinvestment rates"
+  },
+
+  "PV": {
+    "formula": "=PV(rate,nper,pmt,fv,type)",
+    "description": "Present Value calculates current value of future payments"
+  },
+  "FV": {
+    "formula": "=FV(rate,nper,pmt,pv,type)",
+    "description": "Future Value calculates future value of investments"
+  },
+  "PMT": {
+    "formula": "=PMT(rate,nper,pv,fv,type)",
+    "description": "Payment calculates periodic payment for loans or investments"
+  },
+  "RATE": {
+    "formula": "=RATE(nper,pmt,pv,fv,type,guess)",
+    "description": "Interest rate per period for annuity or loan"
+  },
+  "NPER": {
+    "formula": "=NPER(rate,pmt,pv,fv,type)",
+    "description": "Number of periods for investment or loan"
+  },
+
+  "CAGR": {
+    "formula": "=POWER(End_Value/Start_Value,1/Years)-1",
+    "description": "Compound Annual Growth Rate shows annualized return over multiple periods"
+  },
+  "ROI": {
+    "formula": "=(Final_Value-Initial_Investment)/Initial_Investment",
+    "description": "Return on Investment measures percentage gain or loss on an investment"
+  },
+  "Annualized_Return": {
+    "formula": "=POWER(1+Total_Return,Periods_per_Year/Num_Periods)-1",
+    "description": "Converts total return to annualized return rate"
+  },
+
+  "Sharpe_Ratio": {
+    "formula": "=(AVERAGE(Returns)-Risk_Free_Rate)/STDEV.S(Returns)",
+    "description": "Risk-adjusted return metric comparing excess return to volatility"
+  },
+  "Volatility_Annualized": {
+    "formula": "=STDEV.S(Returns)*SQRT(Periods_per_Year)",
+    "description": "Annualized volatility measure based on return standard deviation"
+  },
+  "Beta": {
+    "formula": "=SLOPE(Stock_Returns,Market_Returns)",
+    "description": "Measures stock's volatility relative to the overall market"
+  },
+  "Alpha": {
+    "formula": "=INTERCEPT(Stock_Returns,Market_Returns)",
+    "description": "Excess return compared to market benchmark performance"
+  },
+
+  "EBITDA_Margin": {
+    "formula": "=EBITDA/Revenue",
+    "description": "Profitability ratio showing EBITDA as percentage of revenue"
+  },
+  "Gross_Margin": {
+    "formula": "=Gross_Profit/Revenue",
+    "description": "Profitability ratio showing gross profit as percentage of revenue"
+  },
+  "Operating_Margin": {
+    "formula": "=Operating_Income/Revenue",
+    "description": "Profitability ratio showing operating income as percentage of revenue"
+  },
+  "Net_Profit_Margin": {
+    "formula": "=Net_Income/Revenue",
+    "description": "Profitability ratio showing net income as percentage of revenue"
+  },
+
+  "ROE": {
+    "formula": "=Net_Income/Average_Equity",
+    "description": "Return on Equity shows net income as percentage of shareholder equity"
+  },
+  "ROA": {
+    "formula": "=Net_Income/Average_Total_Assets",
+    "description": "Return on Assets measures net income as percentage of total assets"
+  },
+
+  "Debt_to_Equity": {
+    "formula": "=Total_Debt/Shareholders_Equity",
+    "description": "Financial leverage ratio comparing debt to shareholder equity"
+  },
+  "Current_Ratio": {
+    "formula": "=Current_Assets/Current_Liabilities",
+    "description": "Liquidity ratio showing ability to pay short-term obligations"
+  },
+  "Quick_Ratio": {
+    "formula": "=(Current_Assets-Inventory)/Current_Liabilities",
+    "description": "Acid-test ratio measuring immediate liquidity without inventory"
+  },
+  "Interest_Coverage": {
+    "formula": "=EBIT/Interest_Expense",
+    "description": "Solvency ratio measuring ability to pay interest on debt"
+  },
+
+  "Dividend_Yield": {
+    "formula": "=Annual_Dividend_per_Share/Share_Price",
+    "description": "Annual dividend payment as percentage of current stock price"
+  },
+  "Payout_Ratio": {
+    "formula": "=Dividends/Net_Income",
+    "description": "Percentage of net income paid out as dividends"
+  },
+
+  "WACC": {
+    "formula": "=SUMPRODUCT(Weights,Costs)",
+    "description": "Weighted Average Cost of Capital represents the average cost of financing"
+  },
+
+  "Duration": {
+    "formula": "=DURATION(Settlement_Date,Maturity_Date,Coupon_Rate,Yield,Frequency,Basis)",
+    "description": "Modified duration measuring bond price sensitivity to yield changes"
+  },
+  "Convexity": {
+    "formula": "=CONVEXITY(Settlement_Date,Maturity_Date,Coupon_Rate,Yield,Frequency,Basis)",
+    "description": "Bond convexity measuring curvature of price-yield relationship"
+  },
+
+  "Average_Price_By_Ticker": {
+    "formula": "=AVERAGEIF(Ticker_Range,Ticker_Criteria,Price_Range)",
+    "description": "Calculates average price for a specific ticker symbol"
+  },
+  "Sum_By_Two_Conditions": {
+    "formula": "=SUMIFS(Sum_Range,Criteria_Range1,Criteria1,Criteria_Range2,Criteria2)",
+    "description": "Sums values based on two filtering conditions"
+  },
+  "Count_Distinct_Tickers": {
+    "formula": "=SUMPRODUCT(1/COUNTIF(Ticker_Range,Ticker_Range))",
+    "description": "Counts the number of unique ticker symbols in the data"
+  },
+
+  "Price_to_Earnings": {
+    "formula": "=Share_Price/Earnings_per_Share",
+    "description": "Price-to-Earnings ratio measures market valuation relative to earnings"
+  },
+  "Price_to_Book": {
+    "formula": "=Share_Price/Book_Value_per_Share",
+    "description": "Price-to-Book ratio compares market value to book value per share"
+  },
+  "Debt_Service_Coverage": {
+    "formula": "=Net_Operating_Income/Total_Debt_Service",
+    "description": "Measures ability to pay debt obligations from operating income"
+  },
+  "Working_Capital": {
+    "formula": "=Current_Assets-Current_Liabilities",
+    "description": "Short-term liquidity measure showing excess current assets"
+  },
+  "Asset_Turnover": {
+    "formula": "=Revenue/Average_Total_Assets",
+    "description": "Efficiency ratio measuring revenue generated per dollar of assets"
+  }
+}

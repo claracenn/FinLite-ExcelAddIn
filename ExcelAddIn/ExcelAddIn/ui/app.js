@@ -78,11 +78,86 @@ function getVerbosity() {
     return (typeof v === 'string' && v) ? v : 'Concise';
 }
 
+function updatePlaceholder() {
+    const verbosity = getVerbosity();
+    let placeholder = 'Type a question... (Enter to send, Ctrl+Enter for newline)';
+    
+    if (verbosity === 'Formula') {
+        placeholder = 'Ask a formula (e.g., How to calculate CAGR?)';
+    } else if (verbosity === 'Detailed') {
+        placeholder = 'Type a detailed question... (Enter to send, Ctrl+Enter for newline)';
+    } else {
+        placeholder = 'Type a question... (Enter to send, Ctrl+Enter for newline)';
+    }
+    
+    if (promptEl) {
+        promptEl.placeholder = placeholder;
+    }
+}
+
 function showThinking() {
     thinkingIndex = history.length;
     history.push({ role: 'assistant', text: 'Thinking...', md: false });
     renderChatHistory();
     setSpinner(true);
+}
+
+async function handleFormulaRequest(prompt) {
+    try {
+        const response = await fetch('http://127.0.0.1:8000/formula-helper', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                prompt: prompt,
+                user_selection: '',
+                active_cell: '',
+                occupied_ranges: []
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            
+            let formattedResponse;
+            
+            // Check if this is a fallback response (LLM generated)
+            if (result.formula === "See explanation above") {
+                // For fallback, just show the explanation without template formatting
+                formattedResponse = result.explanation;
+            } else {
+                // For predefined templates, use the structured format
+                formattedResponse = `**Formula Explanation:**
+${result.explanation}
+
+**Formula:**
+\`${result.formula}\``;
+            }
+            
+            // Replace thinking message with the result
+            if (thinkingIndex >= 0 && thinkingIndex < history.length) {
+                history[thinkingIndex] = { role: 'assistant', text: formattedResponse, md: true };
+            } else {
+                history.push({ role: 'assistant', text: formattedResponse, md: true });
+            }
+            renderChatHistory();
+            setSpinner(false);
+        } else {
+            throw new Error(`HTTP ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Formula request failed:', error);
+        const errorMsg = 'Sorry, I encountered an error while generating the formula explanation. Please try again.';
+        
+        if (thinkingIndex >= 0 && thinkingIndex < history.length) {
+            history[thinkingIndex] = { role: 'assistant', text: errorMsg, md: false };
+        } else {
+            history.push({ role: 'assistant', text: errorMsg, md: false });
+        }
+        renderChatHistory();
+        setSpinner(false);
+    }
 }
 
  function sendAsk() {
@@ -92,13 +167,25 @@ function showThinking() {
    const clean = stripSystemDirectives(raw);   
    history.push({ role: 'user', text: clean });
    renderChatHistory();
+   
+   // Clear the prompt input
+   promptEl.value = '';
 
    showThinking();
-   web?.postMessage(JSON.stringify({
-     type: 'ask',
-     prompt: clean, 
-     verbosity: getVerbosity()
-   }));
+   
+   const verbosity = getVerbosity();
+   
+   // If Formula mode is selected, call the formula helper endpoint directly
+   if (verbosity === 'Formula') {
+     handleFormulaRequest(clean);
+   } else {
+     // Regular chat mode - send to C# backend as before
+     web?.postMessage(JSON.stringify({
+       type: 'ask',
+       prompt: clean, 
+       verbosity: verbosity
+     }));
+   }
  }
 
 function toggleHistoryPopover() {
@@ -352,6 +439,9 @@ promptEl?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.ctrlKey) { e.preventDefault(); sendAsk(); }
 });
 
+// Update placeholder when verbosity changes
+selVerb?.addEventListener('change', updatePlaceholder);
+
 helpBtn?.addEventListener('click', () => {
     web?.postMessage(JSON.stringify({ type: 'help' }));
 });
@@ -379,6 +469,9 @@ micBtn?.addEventListener('click', handleMicClick);
 document.addEventListener('DOMContentLoaded', initializeVoiceRecognition);
 // Also initialize immediately in case DOMContentLoaded already fired
 initializeVoiceRecognition();
+
+// Initialize placeholder
+updatePlaceholder();
 
 document.addEventListener('pointerdown', (e) => {
   if (!historyPopover?.hidden && !historyPopover.contains(e.target) && e.target !== historyBtn) {

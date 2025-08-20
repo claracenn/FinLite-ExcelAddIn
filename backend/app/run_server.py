@@ -38,39 +38,87 @@ from table_linearizer import linearize
 from llm_generating import generate_answer
 from save_jsonl import LOG_PATH, save_interaction
 
-# Thread pool for blocking operations
 executor = ThreadPoolExecutor(max_workers=2)
 
-# Initialize Whisper model for speech recognition
 whisper_model = None
 
 def get_whisper_model():
     global whisper_model
     if whisper_model is None:
-        # Use "base" model for good balance of speed and accuracy
-        # You can use "tiny", "base", "small", "medium", "large" based on your needs
         whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
     return whisper_model
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    load_formula_templates()
     yield
     # Shutdown
     executor.shutdown(wait=True)
 
 app = FastAPI(title="ExcelRAG Service", lifespan=lifespan)
 
-# Add CORS middleware to handle cross-origin requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure as needed for security
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 CHUNKS: List[str] = []
+FORMULA_TEMPLATES: Dict[str, Dict[str, str]] = {}
+
+def load_formula_templates():
+    """Load predefined financial formulas from JSON file"""
+    global FORMULA_TEMPLATES
+    try:
+        formula_file_path = BASE / "fin_formula.json"
+        if formula_file_path.exists():
+            with open(formula_file_path, 'r', encoding='utf-8') as f:
+                FORMULA_TEMPLATES = json.load(f)
+            print(f"Loaded {len(FORMULA_TEMPLATES)} formula templates")
+        else:
+            print("Formula templates file not found, using empty templates")
+            FORMULA_TEMPLATES = {}
+    except Exception as e:
+        print(f"Error loading formula templates: {e}")
+        FORMULA_TEMPLATES = {}
+
+def find_matching_template(prompt: str) -> Optional[str]:
+    """Find a matching formula template key based on user prompt"""
+    prompt_upper = prompt.upper().strip()
+    
+    # Direct key match (case-insensitive)
+    for key in FORMULA_TEMPLATES.keys():
+        if key.upper() == prompt_upper:
+            return key
+    
+    # Check if prompt contains any template key
+    for key in FORMULA_TEMPLATES.keys():
+        if key.upper() in prompt_upper or prompt_upper in key.upper():
+            return key
+    
+    # Check for common formula variations
+    formula_mappings = {
+        "NET PRESENT VALUE": "NPV",
+        "INTERNAL RATE OF RETURN": "IRR",
+        "RETURN ON EQUITY": "ROE", 
+        "RETURN ON ASSETS": "ROA",
+        "COMPOUND ANNUAL GROWTH RATE": "CAGR",
+        "RETURN ON INVESTMENT": "ROI",
+        "WEIGHTED AVERAGE COST OF CAPITAL": "WACC",
+        "EARNINGS BEFORE INTEREST TAXES DEPRECIATION AMORTIZATION": "EBITDA_Margin",
+        "CURRENT RATIO": "Current_Ratio",
+        "DEBT TO EQUITY": "Debt_to_Equity",
+        "DIVIDEND YIELD": "Dividend_Yield"
+    }
+    
+    for phrase, key in formula_mappings.items():
+        if phrase in prompt_upper:
+            return key
+    
+    return None
 
 class ChatRequest(BaseModel):
     prompt: str
@@ -81,6 +129,21 @@ class ChatResponse(BaseModel):
 
 class SpeechResponse(BaseModel):
     text: str
+
+class FormulaRequest(BaseModel):
+    prompt: str
+    user_selection: Optional[str] = ""
+    active_cell: Optional[str] = ""
+    occupied_ranges: Optional[List[str]] = []
+
+class FormulaResponse(BaseModel):
+    explanation: str
+    formula: str
+
+class FormulaTemplateResponse(BaseModel):
+    name: str
+    formula: str
+    description: str
 
 @app.post("/speech-to-text", response_model=SpeechResponse)
 async def speech_to_text(audio_file: UploadFile = File(...)):
@@ -105,7 +168,6 @@ async def speech_to_text(audio_file: UploadFile = File(...)):
             
             def transcribe_audio():
                 segments, info = model.transcribe(temp_file_path, beam_size=5)
-                # Combine all segments into a single text
                 text = ""
                 for segment in segments:
                     text += segment.text
@@ -126,14 +188,99 @@ async def speech_to_text(audio_file: UploadFile = File(...)):
                 pass
                 
     except HTTPException:
-        # Re-raise HTTP exceptions
         raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
 
+@app.post("/formula-helper", response_model=FormulaResponse)
+async def formula_helper(req: FormulaRequest):
+    """
+    Provide formula explanations based on user request.
+    First checks for predefined templates, then falls back to LLM generation.
+    """
+    try:
+        # First, check if the prompt matches any predefined template
+        template_key = find_matching_template(req.prompt)
+        
+        if template_key and template_key in FORMULA_TEMPLATES:
+            # Return predefined template
+            template_data = FORMULA_TEMPLATES[template_key]
+            formula = template_data["formula"]
+            description = template_data["description"]
+            
+            return FormulaResponse(
+                explanation=description,
+                formula=formula
+            )
+        
+        formula_prompt = f"""You are an Excel formula expert. Please answer the question: {req.prompt}. 
+            Provide concisely:
+            1. Brief explanation of the suggested formula (1-2 sentences)
+            2. Excel formula syntax
+            """
+        
+        loop = asyncio.get_event_loop()
+        raw_response = await loop.run_in_executor(executor, generate_answer, formula_prompt)
+        
+        # Return the raw response directly in explanation field
+        return FormulaResponse(
+            explanation=raw_response.strip(),
+            formula="See explanation above"
+        )
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error generating formula explanation: {str(e)}")
+
+@app.get("/formula-template/{name}", response_model=FormulaTemplateResponse)
+async def get_formula_template(name: str):
+    """
+    Get a predefined financial formula template by name
+    """
+    try:
+        # Check if the template exists (case-insensitive)
+        template_key = None
+        for key in FORMULA_TEMPLATES.keys():
+            if key.upper() == name.upper():
+                template_key = key
+                break
+        
+        if template_key is None:
+            raise HTTPException(status_code=404, detail=f"Formula template '{name}' not found")
+        
+        template_data = FORMULA_TEMPLATES[template_key]
+        
+        return FormulaTemplateResponse(
+            name=template_key,
+            formula=template_data["formula"],
+            description=template_data["description"]
+        )
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error retrieving formula template: {str(e)}")
+
+@app.get("/formula-templates")
+async def list_formula_templates():
+    """
+    Get a list of all available formula templates
+    """
+    try:
+        templates = []
+        for name, template_data in FORMULA_TEMPLATES.items():
+            templates.append({
+                "name": name,
+                "formula": template_data["formula"]
+            })
+        return {"templates": templates, "count": len(templates)}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error listing formula templates: {str(e)}")
+
 @app.post("/initialize")
 async def initialize(req: Request):
+    """
+    Initialize the service with the provided Excel file.
+    """
     body = await req.json()
     excel_path = body["path"]
 
@@ -151,6 +298,9 @@ async def initialize(req: Request):
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
+    """
+    Chat endpoint for user queries
+    """
     try:
         if req.snippets:
             full_prompt = (
@@ -158,17 +308,14 @@ async def chat(req: ChatRequest):
                 + "\n".join(req.snippets)
                 + f"\n\nQuestion: {req.prompt}\nAnswer:"
             )
-            # Run the blocking LLM generation in a thread pool
             loop = asyncio.get_event_loop()
             raw = await loop.run_in_executor(executor, generate_answer, full_prompt)
         else:
-            # Run the entire RAG pipeline in a thread pool
             loop = asyncio.get_event_loop()
             selected_chunks, raw = await loop.run_in_executor(executor, rag_pipeline, req.prompt)
         
         answer = trim_to_first_answer(raw)
         
-        # Run the save operation in a thread pool as well (in case it's also blocking)
         if req.snippets:
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(executor, save_interaction, req.prompt, req.snippets, answer)
