@@ -10,6 +10,6 @@
   "EMBEDDING_MODEL": "models/all-MiniLM-L6-v2",
   "INDEX_PATH": "index.pkl",
   "EXCEL_FILE": "Sample_Financial_Data.xlsx",
-  "K": 5,
+  "K": 3,
   "LOG_JSONL": "logs/requests.jsonl"
 }
