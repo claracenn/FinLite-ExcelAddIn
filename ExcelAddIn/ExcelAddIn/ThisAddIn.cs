@@ -19,6 +19,9 @@ namespace ExcelAddIn
             _pane = this.CustomTaskPanes.Add(_control, "FinLite");
             _pane.Visible = true;
 
+            // Ensure backend is running (spawns run_server.exe if needed)
+            await BackendService.EnsureStartedAsync();
+
             _pane.DockPosition = Office.MsoCTPDockPosition.msoCTPDockPositionRight;
             if (_pane.Width < InitialPaneWidth)
                 _pane.Width = InitialPaneWidth;
@@ -42,6 +45,7 @@ namespace ExcelAddIn
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
         {
             Application.SheetSelectionChange -= OnSelectionChange;
+            BackendService.Stop();
         }
 
         private void OnSelectionChange(object sh, Excel.Range target)
