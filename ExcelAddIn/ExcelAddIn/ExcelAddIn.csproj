@@ -19317,8 +19317,8 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-  <Compile Include="BackendService.cs" />
-  <Compile Include="ThisAddIn.cs">
+    <Compile Include="BackendService.cs" />
+    <Compile Include="ThisAddIn.cs">
       <SubType>Code</SubType>
     </Compile>
     <None Include="ThisAddIn.Designer.xml">
@@ -19347,9 +19347,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="backend\python311.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="help.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="ILLink\ILLink.Descriptors.LibraryBuild.xml" />
@@ -19402,6 +19399,6 @@
   <Import Project="..\packages\Microsoft.Web.WebView2.1.0.3351.48\build\Microsoft.Web.WebView2.targets" Condition="Exists('..\packages\Microsoft.Web.WebView2.1.0.3351.48\build\Microsoft.Web.WebView2.targets')" />
   <ItemGroup>
     <Content Remove="backend\**\*" />
-  <Content Remove="backend_internal\**\*" />
+    <Content Remove="backend_internal\**\*" />
   </ItemGroup>
 </Project>

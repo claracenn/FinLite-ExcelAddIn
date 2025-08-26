@@ -51,19 +51,37 @@ function renderChatHistory() {
     let html = '';
     for (const item of history) {
         if (item.role === 'user') {
-            html += `<div><strong>Q:</strong> ${escapeHtml(item.text)}</div>`;
+            html += `
+            <div class="chat-message user">
+                <div class="message-bubble">
+                    ${escapeHtml(item.text)}
+                </div>
+                <div class="message-avatar">U</div>
+            </div>`;
         } else {
+            let content = '';
             if (item.md && window.marked) {
                 let md = marked.parse(item.text || '');
                 md = md.replace(/^<p>/i, '').replace(/<\/p>\s*$/i, '').trim();
-                html += `<div><strong>A:</strong> ${md}</div>`;
+                content = md;
             } else {
-                html += `<div><strong>A:</strong> ${escapeHtml(item.text)}</div>`;
+                content = escapeHtml(item.text);
             }
+            
+            html += `
+            <div class="chat-message assistant">
+                <div class="message-avatar">AI</div>
+                <div class="message-bubble">
+                    ${content}
+                </div>
+            </div>`;
         }
-        html += `<div style="opacity:.4;border-bottom:1px dashed #ddd;margin:6px 0;"></div>`;
     }
     ansEl.innerHTML = html || '';
+    
+    if (ansEl) {
+        ansEl.scrollTop = ansEl.scrollHeight;
+    }
 }
 function stripSystemDirectives(s) {
     if (!s) return '';
@@ -122,12 +140,9 @@ async function handleFormulaRequest(prompt) {
             
             let formattedResponse;
             
-            // Check if this is a fallback response (LLM generated)
             if (result.formula === "See explanation above") {
-                // For fallback, just show the explanation without template formatting
                 formattedResponse = result.explanation;
             } else {
-                // For predefined templates, use the structured format
                 formattedResponse = `**Formula Explanation:**
 ${result.explanation}
 
@@ -135,7 +150,6 @@ ${result.explanation}
 \`${result.formula}\``;
             }
             
-            // Replace thinking message with the result
             if (thinkingIndex >= 0 && thinkingIndex < history.length) {
                 history[thinkingIndex] = { role: 'assistant', text: formattedResponse, md: true };
             } else {
@@ -168,7 +182,6 @@ ${result.explanation}
    history.push({ role: 'user', text: clean });
    renderChatHistory();
    
-   // Clear the prompt input
    promptEl.value = '';
 
    showThinking();
@@ -179,7 +192,6 @@ ${result.explanation}
    if (verbosity === 'Formula') {
      handleFormulaRequest(clean);
    } else {
-     // Regular chat mode - send to C# backend as before
      web?.postMessage(JSON.stringify({
        type: 'ask',
        prompt: clean, 
@@ -200,10 +212,25 @@ function toggleHistoryPopover() {
 
 function toggleAboutPopover() {
   if (!aboutPopover) return;
-  // Hide history popover if open
   if (!historyPopover?.hidden) historyPopover.hidden = true;
-  // Toggle about popover
   aboutPopover.hidden = !aboutPopover.hidden;
+}
+
+function handleExcelSelection(direction) {
+  const directionMap = {
+    'ArrowUp': 'up',
+    'ArrowDown': 'down', 
+    'ArrowLeft': 'left',
+    'ArrowRight': 'right'
+  };
+  
+  const dir = directionMap[direction];
+  if (dir) {
+    web?.postMessage(JSON.stringify({ 
+      type: 'excel-select', 
+      direction: dir 
+    }));
+  }
 }
 
 function fmtShortTime(ms) {
@@ -275,12 +302,11 @@ function pushToHistory(m) {
 
 // Voice recognition functions
 function initializeVoiceRecognition() {
-  // Try to use Web Speech API first
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
     recognition.continuous = false;
-    recognition.interimResults = true; // Show interim results
+    recognition.interimResults = true;
     recognition.lang = 'en-US';
     
     recognition.onstart = function() {
@@ -295,14 +321,12 @@ function initializeVoiceRecognition() {
       if (result.isFinal) {
         const transcript = result[0].transcript.trim();
         if (transcript) {
-          // Append to existing text instead of replacing
           const currentText = promptEl.value.trim();
           if (currentText) {
             promptEl.value = currentText + ' ' + transcript;
           } else {
             promptEl.value = transcript;
           }
-          // Auto-stop after getting final result
           recognition.stop();
         }
       }
@@ -310,7 +334,6 @@ function initializeVoiceRecognition() {
     
     recognition.onerror = function(event) {
       console.error('Speech recognition error:', event.error);
-      // Silent error handling - no toast messages
       isRecording = false;
       updateMicButton();
     };
@@ -324,15 +347,12 @@ function initializeVoiceRecognition() {
 
 function startVoiceRecording() {
   if (recognition) {
-    // Use Web Speech API
     try {
       recognition.start();
     } catch (error) {
       console.error('Failed to start speech recognition:', error);
-      // Silent error handling
     }
   } else {
-    // Fallback to MediaRecorder for file upload
     startMediaRecording();
   }
 }
@@ -359,7 +379,6 @@ async function startMediaRecording() {
       const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
       await uploadAudioForTranscription(audioBlob);
       
-      // Stop all tracks to release microphone
       stream.getTracks().forEach(track => track.stop());
     };
     
@@ -369,7 +388,6 @@ async function startMediaRecording() {
     
   } catch (error) {
     console.error('Failed to access microphone:', error);
-    // Silent error handling
   }
 }
 
@@ -394,7 +412,6 @@ async function uploadAudioForTranscription(audioBlob) {
     if (response.ok) {
       const result = await response.json();
       if (result.text && result.text.trim()) {
-        // Append to existing text instead of replacing
         const currentText = promptEl.value.trim();
         if (currentText) {
           promptEl.value = currentText + ' ' + result.text.trim();
@@ -407,7 +424,6 @@ async function uploadAudioForTranscription(audioBlob) {
     }
   } catch (error) {
     console.error('Failed to upload audio:', error);
-    // Silent error handling
   }
 }
 
@@ -439,7 +455,6 @@ promptEl?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.ctrlKey) { e.preventDefault(); sendAsk(); }
 });
 
-// Update placeholder when verbosity changes
 selVerb?.addEventListener('change', updatePlaceholder);
 
 helpBtn?.addEventListener('click', () => {
@@ -462,15 +477,11 @@ newChatBtn?.addEventListener('click', () => {
   startNewConversation();
 });
 
-// Microphone button event listener
 micBtn?.addEventListener('click', handleMicClick);
 
-// Initialize voice recognition on page load
 document.addEventListener('DOMContentLoaded', initializeVoiceRecognition);
-// Also initialize immediately in case DOMContentLoaded already fired
 initializeVoiceRecognition();
 
-// Initialize placeholder
 updatePlaceholder();
 
 document.addEventListener('pointerdown', (e) => {
@@ -494,8 +505,17 @@ document.addEventListener('keydown', (e) => {
     if (!historyPopover?.hidden) historyPopover.hidden = true;
     if (!aboutPopover?.hidden) aboutPopover.hidden = true;
   }
+  // Voice input shortcut: Ctrl+M
+  if (e.ctrlKey && e.key === 'm') {
+    e.preventDefault();
+    handleMicClick();
+  }
+  // Excel selection shortcuts: Ctrl+Shift+Arrow keys
+  if (e.ctrlKey && e.shiftKey && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    e.preventDefault();
+    handleExcelSelection(e.key);
+  }
 });
-
 
 
 // Host -> Web

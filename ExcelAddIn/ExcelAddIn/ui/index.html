@@ -8,9 +8,29 @@
   <script type="module" src="https://unpkg.com/@fluentui/web-components"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    :root { --pad: 10px; }
-    body { margin:0; font-family: Segoe UI, system-ui, sans-serif; }
-    .app { display:flex; flex-direction:column; height:100vh; }
+    :root { 
+        --pad: 10px; 
+        --font-family: "Segoe UI", "Segoe UI Variable", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    /* Unified font settings */
+    body { 
+        margin:0; 
+        font-family: var(--font-family); 
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    
+    * {
+        font-family: var(--font-family) !important;
+    }
+    
+    .app { 
+        display:flex; 
+        flex-direction:column; 
+        height:100vh; 
+        font-family: var(--font-family);
+    }
 
     /* Top Bar */
     .topbar {
@@ -18,53 +38,255 @@
         padding:8px var(--pad);
         border-bottom:1px solid #e5e5e5;
         position: relative;
+        background: #fafafa;
+        font-family: var(--font-family);
     }
-    .grow { flex:1; }
+    .grow { 
+        flex:1; 
+        font-family: var(--font-family);
+        font-weight: 600;
+        font-size: 16px;
+    }
 
     /* Verbosity dropdown */
     #verbosity {
-        font-size: 10px;
+        font-size: 12px;
+        font-family: var(--font-family);
     }
 
-    /* Layout */
+    /* Layout - Fixed height layout */
     .content {
-        display:grid;
-        grid-template-rows: 1fr auto auto;
+        display:flex;
+        flex-direction:column;
         gap:8px;
         padding:var(--pad);
-        height:100%;
+        height:calc(100vh - 60px); /* Subtract topbar height */
         box-sizing:border-box;
+        overflow: hidden; /* Prevent overall scrolling */
     }
-    .row { display:flex; gap:8px; align-items:center; }
+    
+    .row { 
+        display:flex; 
+        gap:8px; 
+        align-items:center; 
+        font-family: var(--font-family);
+    }
 
-    /* Chat History */
+    /* Chat History - Scrollable area */
+    .chat-history-container {
+        flex: 1; /* Take up remaining space */
+        display: flex;
+        flex-direction: column;
+        min-height: 0; /* Allow flex shrinking */
+        overflow: hidden;
+    }
+    
     .answer {
-        overflow:auto;
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
         border:none;
         background:transparent;
-        padding:0;
+        padding: 8px 0;
+        font-family: var(--font-family);
+        scrollbar-width: thin;
+        scrollbar-color: #c1c1c1 transparent;
+    }
+    
+    .answer::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .answer::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    .answer::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+    
+    .answer::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+
+    /* Chat Bubble Styles */
+    .chat-message {
+        margin: 12px 8px;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        font-family: var(--font-family);
+    }
+    
+    .chat-message.user {
+        justify-content: flex-end;
+    }
+    
+    .chat-message.assistant {
+        justify-content: flex-start;
+    }
+    
+    .message-bubble {
+        max-width: 70%;
+        padding: 10px 12px;
+        border-radius: 16px;
+        font-size: 14px;
+        line-height: 1.4;
+        word-wrap: break-word;
+        font-family: var(--font-family);
+        position: relative;
+    }
+    
+    .chat-message.user .message-bubble {
+        background: #0078d4;
+        color: white;
+        border-bottom-right-radius: 4px;
+        margin-left: auto;
+    }
+    
+    .chat-message.assistant .message-bubble {
+        background: #f3f2f1;
+        color: #323130;
+        border-bottom-left-radius: 4px;
+        border: 1px solid #e1dfdd;
+    }
+    
+    .message-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        flex-shrink: 0;
+        font-family: var(--font-family);
+    }
+    
+    .chat-message.user .message-avatar {
+        background: #0078d4;
+        color: white;
+        order: 2;
+    }
+    
+    .chat-message.assistant .message-avatar {
+        background: #6264a7;
+        color: white;
+    }
+    
+    .message-bubble p {
+        margin: 0 0 8px 0;
+        font-family: var(--font-family);
+    }
+    
+    .message-bubble p:last-child {
+        margin-bottom: 0;
+    }
+    
+    .message-bubble code {
+        background: rgba(0,0,0,0.1);
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 13px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    
+    .chat-message.user .message-bubble code {
+        background: rgba(255,255,255,0.2);
+    }
+    
+    .message-bubble pre {
+        background: rgba(0,0,0,0.05);
+        padding: 8px;
+        border-radius: 6px;
+        overflow-x: auto;
+        font-size: 13px;
+        margin: 8px 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    
+    .chat-message.user .message-bubble pre {
+        background: rgba(255,255,255,0.2);
+    }
+    
+    /* Dark mode support for chat bubbles */
+    @media (prefers-color-scheme: dark) {
+        .chat-message.assistant .message-bubble {
+            background: #2d2c2c;
+            color: #ffffff;
+            border-color: #484644;
+        }
+        
+        .message-bubble code {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .message-bubble pre {
+            background: rgba(255,255,255,0.05);
+        }
     }
 
     /* Selection */
+    .selection-container {
+        flex-shrink: 0;
+    }
+    
     .mono {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace !important;
         white-space:pre-wrap;
         background:rgba(0,0,0,.03);
-        padding:8px; border-radius:8px;
+        padding:8px; 
+        border-radius:8px;
         height:80px;
-        overflow:auto;
+        overflow-y:auto;
+        overflow-x:hidden;
+        font-size: 12px;
+        line-height: 1.3;
+        scrollbar-width: thin;
+        scrollbar-color: #c1c1c1 transparent;
+    }
+    
+    .mono::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .mono::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    .mono::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
     }
     
     .mono.no-selection {
-        font-family: Segoe UI, system-ui, sans-serif;
+        font-family: var(--font-family) !important;
         color: #888;
         font-style: italic;
+        font-size: 13px;
     }
 
     /* Prompt */
-    .prompt-card { padding:2px; }   
-    .prompt-wrap { position: relative; }
-    #prompt { display:block; width:100%; }
+    .prompt-container {
+        flex-shrink: 0;
+    }
+    
+    .prompt-card { 
+        padding:2px; 
+        font-family: var(--font-family);
+    }   
+    .prompt-wrap { 
+        position: relative; 
+        font-family: var(--font-family);
+    }
+    #prompt { 
+        display:block; 
+        width:100%; 
+        font-family: var(--font-family);
+        font-size: 14px;
+    }
     #prompt {
         --neutral-stroke-input-rest: transparent;
         --neutral-stroke-input-hover: transparent;
@@ -83,15 +305,57 @@
         box-shadow:none !important;
         background:transparent;
         outline:none;
-        resize:none;               
+        resize:none;
+        font-family: var(--font-family) !important;
+        font-size: 14px !important;
+        line-height: 1.4 !important;
+    }
+
+    /* FluentUI component font override */
+    fluent-card {
+        font-family: var(--font-family) !important;
+    }
+    
+    fluent-button {
+        font-family: var(--font-family) !important;
+    }
+    
+    fluent-select {
+        font-family: var(--font-family) !important;
+    }
+    
+    fluent-text-area {
+        font-family: var(--font-family) !important;
+    }
+    
+    fluent-option {
+        font-family: var(--font-family) !important;
     }
 
     /* Prompt Button */
-    .send-btn { position:absolute; right:12px;  bottom:12px; z-index:5; }
-    .mic-btn  { position:absolute; right:70px; bottom:12px; z-index:5; }
+    .send-btn { 
+        position:absolute; 
+        right:12px;  
+        bottom:12px; 
+        z-index:5;
+        font-family: var(--font-family) !important;
+    }
+    .mic-btn  { 
+        position:absolute; 
+        right:70px; 
+        bottom:12px; 
+        z-index:5;
+        font-family: var(--font-family) !important;
+    }
 
     /* Loading */
-    #spinner { width:14px; height:14px; position:absolute; right:120px; bottom:20px; }
+    #spinner { 
+        width:14px; 
+        height:14px; 
+        position:absolute; 
+        right:120px; 
+        bottom:20px; 
+    }
     .hidden { display:none; }
 
     /* History Popover */
@@ -107,11 +371,31 @@
         border-radius: 10px;
         box-shadow: 0 10px 28px rgba(0,0,0,.12);
         z-index: 1000;
+        font-family: var(--font-family);
+        scrollbar-width: thin;
+        scrollbar-color: #c1c1c1 transparent;
+    }
+    
+    .history-popover::-webkit-scrollbar,
+    .about-popover::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .history-popover::-webkit-scrollbar-track,
+    .about-popover::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    .history-popover::-webkit-scrollbar-thumb,
+    .about-popover::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
     }
 
     .about-popover {
         width: 400px;
         max-height: 500px;
+        font-family: var(--font-family);
     }
 
     .history-popover-header, .about-popover-header {
@@ -122,18 +406,21 @@
         border-bottom: 1px solid #eee;
         font-weight: 600;
         font-size: 13px;
+        font-family: var(--font-family);
     }
 
     .about-content {
         padding: 16px;
         line-height: 1.6;
         font-size: 13px;
+        font-family: var(--font-family);
     }
 
     .about-main-text {
         margin: 0 0 16px 0;
         color: #333;
         font-weight: 400;
+        font-family: var(--font-family);
     }
 
     .about-credit {
@@ -145,17 +432,20 @@
         text-align: center;
         font-style: italic;
         letter-spacing: 0.3px;
+        font-family: var(--font-family);
     }
 
     .about-content h3 {
         margin: 0 0 8px 0;
         color: #2c3e50;
         font-size: 14px;
+        font-family: var(--font-family);
     }
 
     .about-content p {
         margin: 0 0 8px 0;
         color: #555;
+        font-family: var(--font-family);
     }
 
     .history-list {
@@ -163,6 +453,7 @@
         flex-direction: column;
         padding: 6px;
         gap: 4px;
+        font-family: var(--font-family);
     }
 
     .history-item {
@@ -173,6 +464,7 @@
         padding: 8px;
         border-radius: 8px;
         cursor: pointer;
+        font-family: var(--font-family);
     }
 
     .history-item:hover {
@@ -186,16 +478,19 @@
         white-space: normal;
         display: -webkit-box;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
         overflow-wrap: anywhere;
         word-break: break-word;
+        font-family: var(--font-family);
     }
 
     .history-item-time {
         font-size: 11px;
         opacity: .6;
         white-space: nowrap;
+        font-family: var(--font-family);
     }
 
     @media (prefers-color-scheme: dark) {
@@ -263,7 +558,7 @@
         right: auto;
     }
 
-    /* Microphone button styles - Force override FluentUI */
+    /* Microphone button */
     fluent-button#micBtn,
     fluent-button.mic-btn,
     #micBtn {
@@ -374,8 +669,7 @@
     </fluent-button>
     <fluent-button id="historyBtn" appearance="stealth" title="History">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-        <path d="M8 3.5a4.5 4.5 0 0 0-4.5 4.5.5.5 0 0 1-1 0 5.5 5.5 0 1 1 5.5 5.5H8a.5.5 0 0 1 0-1h.5A4.5 4.5 0 1 0 8 3.5z"/>
-        <path d="M7.5 7.5v2.207l1.147.853a.5.5 0 0 1-.554.832L6.5 10.207V7.5a.5.5 0 0 1 1 0z"/>
+        <path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3zm0 3v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6H2zm3 1.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/>
       </svg>
     </fluent-button>
     <fluent-button id="aboutBtn" appearance="stealth" title="About">
@@ -395,39 +689,45 @@
 
   <div class="content">
     <!-- Chat History -->
-    <fluent-card style="display:flex; flex-direction:column; min-height:160px;">
-      <div style="font-weight:600; margin-bottom:6px;">History</div>
-      <div id="ans" class="answer"></div>
-    </fluent-card>
+    <div class="chat-history-container">
+      <fluent-card style="display:flex; flex-direction:column; height:100%;">
+        <div style="font-weight:600; margin-bottom:6px; font-family: var(--font-family);">Chat</div>
+        <div id="ans" class="answer"></div>
+      </fluent-card>
+    </div>
 
     <!-- Selection Preview -->
-    <fluent-card>
-      <div style="font-weight:600;margin-bottom:6px;">Selection preview</div>
-      <div id="sel" class="mono no-selection">(no selection)</div>
-    </fluent-card>
+    <div class="selection-container">
+      <fluent-card>
+        <div style="font-weight:600;margin-bottom:6px; font-family: var(--font-family);">Selection preview</div>
+        <div id="sel" class="mono no-selection">(no selection)</div>
+      </fluent-card>
+    </div>
 
     <!-- Prompt -->
-    <fluent-card class="prompt-card">
-      <div class="prompt-wrap" style="font-size: 1em;">
-        <fluent-text-area id="prompt"
-          placeholder="Type a question..."
-          style="font-size: 1em;">
-        </fluent-text-area>
+    <div class="prompt-container">
+      <fluent-card class="prompt-card">
+        <div class="prompt-wrap" style="font-size: 1em;">
+          <fluent-text-area id="prompt"
+            placeholder="Type a question..."
+            style="font-size: 1em;">
+          </fluent-text-area>
 
-        <fluent-progress-ring id="spinner" class="hidden"></fluent-progress-ring>
-        <fluent-button id="micBtn"  appearance="stealth" class="mic-btn" title="Hold to talk">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
-            <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0v5zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3z"/>
-          </svg>
-        </fluent-button>
-        <fluent-button id="sendBtn" appearance="accent"  class="send-btn">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z"/>
-          </svg>
-        </fluent-button>
-      </div>
-    </fluent-card>
+          <fluent-progress-ring id="spinner" class="hidden"></fluent-progress-ring>
+          <fluent-button id="micBtn"  appearance="stealth" class="mic-btn" title="Hold to talk">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5z"/>
+              <path d="M10 8a2 2 0 1 1-4 0V3a2 2 0 1 1 4 0v5zM8 0a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V3a3 3 0 0 0-3-3z"/>
+            </svg>
+          </fluent-button>
+          <fluent-button id="sendBtn" appearance="accent"  class="send-btn">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z"/>
+            </svg>
+          </fluent-button>
+        </div>
+      </fluent-card>
+    </div>
 
     <!-- History popover -->
     <div id="historyPopover" class="history-popover" hidden>

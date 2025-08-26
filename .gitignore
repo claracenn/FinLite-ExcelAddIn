@@ -54,6 +54,7 @@ backend/app/models
 [Ll]ogs/
 ExcelAddIn/**/ILLink/
 ExcelAddIn/ExcelAddIn/backend/models
+ExcelAddIn/ExcelAddIn/backend/_internal
 ExcelAddIn/ExcelAddIn/.vs
 
 *.user
