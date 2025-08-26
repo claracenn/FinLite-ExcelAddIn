@@ -32,7 +32,7 @@ import shutil
 
 import uvicorn
 
-from table_main    import rag_pipeline
+from table_main    import rag_pipeline, set_current_chunks, load_excel_data
 from llm_embedding import build_index
 from table_linearizer import linearize
 from llm_generating import generate_answer
@@ -52,6 +52,8 @@ def get_whisper_model():
 async def lifespan(app: FastAPI):
     # Startup
     load_formula_templates()
+    print("Server started. Waiting for Excel file to be loaded...")
+    
     yield
     # Shutdown
     executor.shutdown(wait=True)
@@ -284,15 +286,15 @@ async def initialize(req: Request):
     body = await req.json()
     excel_path = body["path"]
 
-    sheets = pd.read_excel(excel_path, sheet_name=None, engine="openpyxl")
-    chunks = []
-    for sheet_name, df in sheets.items():
-        rows = linearize(df)
-        chunks.extend(f"[{sheet_name}] {row}" for row in rows)
-        
+    # Load Excel data
+    chunks = load_excel_data(excel_path)
     build_index(chunks)
+
+    set_current_chunks(chunks)
+
     global CHUNKS
     CHUNKS = chunks
+    
     return {"status": "index rebuilt", "snippets": len(chunks)}
 
 
@@ -381,6 +383,20 @@ def _title_from_prompt(p: str, limit: int = 50) -> str:
 def trim_to_first_answer(text: str) -> str:
     parts = re.split(r"\n?(?:Question:|Selected range)", text, maxsplit=1)
     return parts[0].strip()
+
+@app.get("/status")
+def get_status():
+    """Get current service status including loaded data info"""
+    from table_main import get_current_chunks
+    current_chunks = get_current_chunks()
+    
+    return {
+        "status": "running",
+        "chunks_loaded": len(current_chunks),
+        "formula_templates": len(FORMULA_TEMPLATES),
+        "has_index": len(current_chunks) > 0,
+        "sample_chunks": current_chunks[:3] if current_chunks else []
+    }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000, reload=False)

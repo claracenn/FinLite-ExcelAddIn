@@ -196,16 +196,23 @@ namespace ExcelAddIn
                     return;
                 }
 
+                // Show loading message
+                PostToWeb(new JObject { ["type"] = "toast", ["message"] = $"Loading workbook: {Path.GetFileName(fullPath)}" });
+
                 var payload = new JObject { ["path"] = fullPath };
                 var content = new StringContent(payload.ToString(), Encoding.UTF8, "application/json");
                 var resp = await _http.PostAsync("/initialize", content);
                 resp.EnsureSuccessStatusCode();
 
+                var responseText = await resp.Content.ReadAsStringAsync();
+                var responseJson = JObject.Parse(responseText);
+                var snippetCount = responseJson["snippets"]?.Value<int>() ?? 0;
+
                 PostToWeb(new JObject { ["type"] = "reset" });
             }
             catch (Exception ex)
             {
-                PostToWeb(new JObject { ["type"] = "toast", ["message"] = $"Initialize skipped: {ex.Message}" });
+                PostToWeb(new JObject { ["type"] = "toast", ["message"] = $"Failed to load workbook: {ex.Message}" });
             }
         }
 

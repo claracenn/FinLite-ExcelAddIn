@@ -14,8 +14,15 @@ pyinstaller --clean --noconfirm ^
   --collect-all fastapi ^
   --collect-all uvicorn ^
   --collect-all pydantic ^
+  --collect-all faster_whisper ^
+  --collect-all starlette ^
+  --collect-all anyio ^
+  --collect-all sniffio ^
+  --collect-all h11 ^
+  --collect-all pydantic_core ^
   --add-data "config.json;." ^
-  --add-data "index.pkl;." ^
-  --add-data "Sample_Financial_Data.xlsx;." ^
+  --add-data "fin_formula.json;." ^
+  --add-data "models;models" ^
   --add-data "src;src" ^
+  --console ^
   run_server.py

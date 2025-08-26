@@ -27,7 +27,15 @@ def build_index(chunks: list[str]) -> None:
 def load_index():
     global _index
     if _index is None:
-        _index = faiss.read_index(INDEX_PATH)
+        try:
+            if Path(INDEX_PATH).exists():
+                _index = faiss.read_index(INDEX_PATH)
+            else:
+                # If no index file exists, return None and let the caller handle it
+                return None
+        except Exception as e:
+            print(f"Warning: Failed to load index from {INDEX_PATH}: {e}")
+            return None
     return _index
 
 def encode_query(query: str) -> np.ndarray:
@@ -35,5 +43,7 @@ def encode_query(query: str) -> np.ndarray:
 
 def search_index(q_emb: np.ndarray, k: int) -> list[int]:
     idx = load_index()
+    if idx is None:
+        return []
     _, I = idx.search(q_emb, k)
     return I[0].tolist()

@@ -30,6 +30,7 @@ namespace ExcelAddIn
             try { if (_pane.Width < InitialPaneWidth) _pane.Width = InitialPaneWidth; } catch { }
 
             Application.SheetSelectionChange += OnSelectionChange;
+            Application.WorkbookActivate += OnWorkbookActivate;
 
             try
             {
@@ -45,7 +46,16 @@ namespace ExcelAddIn
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
         {
             Application.SheetSelectionChange -= OnSelectionChange;
+            Application.WorkbookActivate -= OnWorkbookActivate;
             BackendService.Stop();
+        }
+
+        private async void OnWorkbookActivate(Excel.Workbook wb)
+        {
+            if (wb != null && !string.IsNullOrWhiteSpace(wb.FullName))
+            {
+                await _control.InitializeWorkbookAsync(wb.FullName);
+            }
         }
 
         private void OnSelectionChange(object sh, Excel.Range target)

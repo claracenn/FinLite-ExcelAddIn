@@ -267,6 +267,10 @@
     <Compile Include="WebView2Pane.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Content Include="backend\python311.dll" />
+    <Content Include="backend\run_server.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="backend\_internal\altgraph-0.17.4.dist-info\top_level.txt" />
     <Content Include="backend\_internal\anyio-4.10.0.dist-info\entry_points.txt" />
     <Content Include="backend\_internal\anyio-4.10.0.dist-info\top_level.txt" />
@@ -16422,6 +16426,8 @@
     <Content Include="backend\index.pkl">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Include="backend\config.json" />
+    <None Include="backend\fin_formula.json" />
     <None Include="backend\models\all-MiniLM-L6-v2\.cache\huggingface\download\.gitattributes.metadata" />
     <None Include="backend\models\all-MiniLM-L6-v2\.cache\huggingface\download\1_Pooling\config.json.metadata" />
     <None Include="backend\models\all-MiniLM-L6-v2\.cache\huggingface\download\config.json.metadata" />
