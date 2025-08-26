@@ -70,7 +70,7 @@ function renderChatHistory() {
             
             html += `
             <div class="chat-message assistant">
-                <div class="message-avatar">AI</div>
+                <div class="message-avatar">FL</div>
                 <div class="message-bubble">
                     ${content}
                 </div>
@@ -98,14 +98,10 @@ function getVerbosity() {
 
 function updatePlaceholder() {
     const verbosity = getVerbosity();
-    let placeholder = 'Type a question... (Enter to send, Ctrl+Enter for newline)';
+    let placeholder = 'Ask anything... (Enter to send)';
     
     if (verbosity === 'Formula') {
         placeholder = 'Ask a formula (e.g., How to calculate CAGR?)';
-    } else if (verbosity === 'Detailed') {
-        placeholder = 'Type a detailed question... (Enter to send, Ctrl+Enter for newline)';
-    } else {
-        placeholder = 'Type a question... (Enter to send, Ctrl+Enter for newline)';
     }
     
     if (promptEl) {

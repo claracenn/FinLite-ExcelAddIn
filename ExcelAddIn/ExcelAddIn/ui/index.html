@@ -131,7 +131,7 @@
         max-width: 70%;
         padding: 10px 12px;
         border-radius: 16px;
-        font-size: 14px;
+        font-size: 12px;
         line-height: 1.4;
         word-wrap: break-word;
         font-family: var(--font-family);
@@ -339,6 +339,12 @@
         bottom:12px; 
         z-index:5;
         font-family: var(--font-family) !important;
+        background: #0078d4 !important;
+        border-color: #0078d4 !important;
+    }
+    .send-btn:hover {
+        background: #106ebe !important;
+        border-color: #106ebe !important;
     }
     .mic-btn  { 
         position:absolute; 
@@ -709,7 +715,7 @@
       <fluent-card class="prompt-card">
         <div class="prompt-wrap" style="font-size: 1em;">
           <fluent-text-area id="prompt"
-            placeholder="Type a question..."
+            placeholder="Ask anything"
             style="font-size: 1em;">
           </fluent-text-area>
 
@@ -744,7 +750,14 @@
         <span>About</span>
       </div>
       <div class="about-content">
-        <div class="about-main-text">FinLite AI for MS Excel, part of the SmolPC collection of AI apps. Developed by Clara Cen, MSc Computer Science, supervised by Prof Dean Mohamedally and Prof Graham Roberts, in collaboration with Intel Corporation.</div>
+        <div class="about-main-text">
+          FinLite FL for MS Excel, part of the SmolPC collection of FL apps. Developed by Clara Cen, MSc Computer Science, supervised by Prof Dean Mohamedally and Prof Graham Roberts, in collaboration with Intel Corporation through the UCL Industry Exchange Network (UCL IXN).
+          <br><br>
+          <strong>UCL IXN Contact:</strong><br>
+          Email: <a href="mailto:ucl.ixn@ucl.ac.uk" style="color: #0078d4; text-decoration: none;">ucl.ixn@ucl.ac.uk</a><br>
+          Website: <a href="https://www.ucl.ac.uk/engineering/computer-science/collaborate/ucl-industry-exchange-network-ucl-ixn" target="_blank" style="color: #0078d4; text-decoration: none;">UCL IXN Program</a>
+        </div>
+        
         <div class="about-credit">Developed at University College London (c) 2025+</div>
       </div>
     </div>
