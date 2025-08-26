@@ -19317,8 +19317,8 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-    <Compile Include="Services\ChatService.cs" />
-    <Compile Include="ThisAddIn.cs">
+  <Compile Include="BackendService.cs" />
+  <Compile Include="ThisAddIn.cs">
       <SubType>Code</SubType>
     </Compile>
     <None Include="ThisAddIn.Designer.xml">
