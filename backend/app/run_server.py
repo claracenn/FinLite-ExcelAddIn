@@ -125,6 +125,7 @@ def find_matching_template(prompt: str) -> Optional[str]:
 class ChatRequest(BaseModel):
     prompt: str
     snippets: Optional[List[str]] = None
+    detailed: Optional[bool] = False
 
 class ChatResponse(BaseModel):
     response: str
@@ -311,10 +312,15 @@ async def chat(req: ChatRequest):
                 + f"\n\nQuestion: {req.prompt}\nAnswer:"
             )
             loop = asyncio.get_event_loop()
-            raw = await loop.run_in_executor(executor, generate_answer, full_prompt)
+            raw = await loop.run_in_executor(executor, generate_answer, full_prompt, req.detailed)
         else:
             loop = asyncio.get_event_loop()
-            selected_chunks, raw = await loop.run_in_executor(executor, rag_pipeline, req.prompt)
+            selected_chunks, raw = await loop.run_in_executor(executor, rag_pipeline, req.prompt, req.detailed)
+            if selected_chunks == [] and (
+                "No data available" in (raw or "") or
+                "Index not available" in (raw or "")
+            ):
+                raise HTTPException(status_code=400, detail=raw)
         
         answer = trim_to_first_answer(raw)
         
@@ -326,6 +332,8 @@ async def chat(req: ChatRequest):
             await loop.run_in_executor(executor, save_interaction, req.prompt, selected_chunks, answer)
             
         return ChatResponse(response=answer)
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

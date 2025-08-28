@@ -36,8 +36,6 @@ namespace ExcelAddIn
                 var env = await CoreWebView2Environment.CreateAsync(null, dataRoot, null);
                 await _web.EnsureCoreWebView2Async(env);
 
-                //_web.CoreWebView2.OpenDevToolsWindow();
-
                 var baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 var uiFolder = Path.Combine(baseDir, "ui");
                 var index = Path.Combine(uiFolder, "index.html");
@@ -87,7 +85,6 @@ namespace ExcelAddIn
                     }
                 case "history":
                     {
-                        // GET /history?limit=5
                         try
                         {
                             var resp = await _http.GetAsync("/history?limit=5");
@@ -106,7 +103,6 @@ namespace ExcelAddIn
                     }
                     case "history-item":
                     {
-                        // GET /history/{id}
                         try
                         {
                             var id = (int?)msg["id"] ?? -1;
@@ -148,7 +144,10 @@ namespace ExcelAddIn
                 ? $"Please answer concisely: {prompt}"
                 : $"Please answer detailedly: {prompt}";
 
-            var payload = new JObject { ["prompt"] = effective };
+            var payload = new JObject { 
+                ["prompt"] = effective,
+                ["detailed"] = verbosity != "Concise"
+            };
             if (!string.IsNullOrWhiteSpace(_lastSelection))
                 payload["snippets"] = new JArray(_lastSelection.Split('\n'));
 
@@ -156,7 +155,18 @@ namespace ExcelAddIn
             {
                 var content = new StringContent(payload.ToString(), Encoding.UTF8, "application/json");
                 var resp = await _http.PostAsync("/chat", content);
-                resp.EnsureSuccessStatusCode();
+                if (!resp.IsSuccessStatusCode)
+                {
+                    var body = await resp.Content.ReadAsStringAsync();
+                    string detail = body;
+                    try
+                    {
+                        var jo = JObject.Parse(body);
+                        detail = jo["detail"]?.ToString() ?? body;
+                    }
+                    catch { }
+                    throw new Exception($"Backend error {(int)resp.StatusCode}: {detail}");
+                }
                 var json = await resp.Content.ReadAsStringAsync();
                 var answer = JObject.Parse(json)["response"]?.ToString() ?? "";
                 int qidx = answer.IndexOf("Question:", StringComparison.OrdinalIgnoreCase);
@@ -196,7 +206,6 @@ namespace ExcelAddIn
                     return;
                 }
 
-                // Show loading message
                 PostToWeb(new JObject { ["type"] = "toast", ["message"] = $"Loading workbook: {Path.GetFileName(fullPath)}" });
 
                 var payload = new JObject { ["path"] = fullPath };

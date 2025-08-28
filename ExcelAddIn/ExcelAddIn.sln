@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36221.1 d17.14
+VisualStudioVersion = 17.14.36221.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExcelAddIn", "ExcelAddIn\ExcelAddIn.csproj", "{B5E38205-45BB-4CF8-9F40-FE7C59767123}"
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "FinLiteExcelAddInSetup", "FinLiteExcelAddInSetup\FinLiteExcelAddInSetup.vdproj", "{9EC6CBE2-7DFB-E039-8F41-818F0A4B35AB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,8 @@ Global
 		{B5E38205-45BB-4CF8-9F40-FE7C59767123}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B5E38205-45BB-4CF8-9F40-FE7C59767123}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B5E38205-45BB-4CF8-9F40-FE7C59767123}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9EC6CBE2-7DFB-E039-8F41-818F0A4B35AB}.Debug|Any CPU.ActiveCfg = Debug
+		{9EC6CBE2-7DFB-E039-8F41-818F0A4B35AB}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

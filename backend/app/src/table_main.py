@@ -56,7 +56,7 @@ if __name__ == "__main__":
     exit(0)
 
 
-def rag_pipeline(prompt: str, k: int | None = None) -> tuple[list[str], str]:
+def rag_pipeline(prompt: str, detailed: bool = False, k: int | None = None) -> tuple[list[str], str]:
     k = k or K
 
     chunks = get_current_chunks()
@@ -72,13 +72,24 @@ def rag_pipeline(prompt: str, k: int | None = None) -> tuple[list[str], str]:
     idxs = search_index(q_emb, k)
     selected = [chunks[i] for i in idxs]
 
-    full_prompt = (
-        "You are a helpful assistant. Use the following table snippets to answer the question.\n\n"
-        + "\n\n".join(selected)
-        + f"\n\nQuestion: {prompt}\nAnswer:"
-    )
+    if detailed:
+        full_prompt = (
+            "You are a helpful assistant. Please provide a comprehensive and detailed analysis based on the following table data.\n\n"
+            + "\n\n".join(selected)
+            + f"\n\nQuestion: {prompt}\n\nPlease provide a detailed answer with:"
+            + "\n- Analysis of the data"
+            + "\n- Key insights and patterns"
+            + "\n- Clear explanations and context"
+            + "\n\nDetailed Answer:"
+        )
+    else:
+        full_prompt = (
+            "You are a helpful assistant. Use the following table snippets to answer the question concisely.\n\n"
+            + "\n\n".join(selected)
+            + f"\n\nQuestion: {prompt}\nAnswer:"
+        )
 
-    answer = generate_answer(full_prompt)
+    answer = generate_answer(full_prompt, detailed)
 
     save_interaction(prompt, selected, answer)
 
