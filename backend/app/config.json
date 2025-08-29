@@ -18,5 +18,11 @@
   "INDEX_PATH": "index.pkl",
   "EXCEL_FILE": "Sample_Financial_Data.xlsx",
   "K": 3,
+  "ANSWERABILITY_THRESHOLD": 0.15,
+  "RETRIEVAL": {
+    "BM25_TOP_MULT": 5,
+    "WEIGHT_BM25": 0.5,
+    "WEIGHT_EMBED": 0.5
+  },
   "LOG_JSONL": "logs/requests.jsonl"
 }

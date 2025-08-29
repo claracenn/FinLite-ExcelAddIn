@@ -316,11 +316,8 @@ async def chat(req: ChatRequest):
         else:
             loop = asyncio.get_event_loop()
             selected_chunks, raw = await loop.run_in_executor(executor, rag_pipeline, req.prompt, req.detailed)
-            if selected_chunks == [] and (
-                "No data available" in (raw or "") or
-                "Index not available" in (raw or "")
-            ):
-                raise HTTPException(status_code=400, detail=raw)
+            if selected_chunks == []:
+                return ChatResponse(response=raw)
         
         answer = trim_to_first_answer(raw)
         
@@ -402,7 +399,7 @@ def get_status():
         "status": "running",
         "chunks_loaded": len(current_chunks),
         "formula_templates": len(FORMULA_TEMPLATES),
-        "has_index": len(current_chunks) > 0,
+    "has_index": len(current_chunks) > 0,
         "sample_chunks": current_chunks[:3] if current_chunks else []
     }
 

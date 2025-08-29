@@ -20,6 +20,9 @@ pyinstaller --clean --noconfirm ^
   --collect-all sniffio ^
   --collect-all h11 ^
   --collect-all pydantic_core ^
+  --collect-all regex ^
+  --collect-all stopwordsiso ^
+  --collect-all snowballstemmer ^
   --add-data "config.json;." ^
   --add-data "fin_formula.json;." ^
   --add-data "models;models" ^

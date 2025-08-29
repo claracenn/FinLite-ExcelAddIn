@@ -31,7 +31,6 @@ def load_index():
             if Path(INDEX_PATH).exists():
                 _index = faiss.read_index(INDEX_PATH)
             else:
-                # If no index file exists, return None and let the caller handle it
                 return None
         except Exception as e:
             print(f"Warning: Failed to load index from {INDEX_PATH}: {e}")
@@ -47,3 +46,9 @@ def search_index(q_emb: np.ndarray, k: int) -> list[int]:
         return []
     _, I = idx.search(q_emb, k)
     return I[0].tolist()
+
+def encode_texts(texts: list[str]) -> np.ndarray:
+    """Batch-encode a list of texts and return a 2D numpy array (n, d)."""
+    if not texts:
+        return np.zeros((0, 384), dtype=np.float32)
+    return _encoder.encode(texts, convert_to_numpy=True)
