@@ -149,6 +149,7 @@ ${result.explanation}
             
             if (thinkingIndex >= 0 && thinkingIndex < history.length) {
                 history[thinkingIndex] = { role: 'assistant', text: formattedResponse, md: true };
+                thinkingIndex = -1;
             } else {
                 history.push({ role: 'assistant', text: formattedResponse, md: true });
             }
@@ -163,6 +164,7 @@ ${result.explanation}
         
         if (thinkingIndex >= 0 && thinkingIndex < history.length) {
             history[thinkingIndex] = { role: 'assistant', text: errorMsg, md: false };
+            thinkingIndex = -1;
         } else {
             history.push({ role: 'assistant', text: errorMsg, md: false });
         }
@@ -177,10 +179,14 @@ ${result.explanation}
 
    // Prevent rapid submissions
    const now = Date.now();
-   if (now - lastSendTime < 1000) {
+   if (now - lastSendTime < 2000) {
      return;
    }
    lastSendTime = now;
+
+   if (thinkingIndex !== -1) {
+     return;
+   }
 
    const clean = stripSystemDirectives(raw);   
    history.push({ role: 'user', text: clean });
@@ -460,7 +466,10 @@ function handleMicClick() {
 sendBtn?.addEventListener('click', sendAsk);
 
 promptEl?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.ctrlKey) { e.preventDefault(); sendAsk(); }
+    if (e.key === 'Enter' && !e.ctrlKey && !sendBtn?.disabled) { 
+        e.preventDefault(); 
+        sendAsk(); 
+    }
 });
 
 selVerb?.addEventListener('change', updatePlaceholder);
