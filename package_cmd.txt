@@ -23,6 +23,8 @@ pyinstaller --clean --noconfirm ^
   --collect-all regex ^
   --collect-all stopwordsiso ^
   --collect-all snowballstemmer ^
+  --hidden-import encodings ^
+  --hidden-import codecs ^
   --add-data "config.json;." ^
   --add-data "fin_formula.json;." ^
   --add-data "models;models" ^

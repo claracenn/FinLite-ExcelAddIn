@@ -1,5 +1,6 @@
 from pydoc import text
 import sys, os
+import logging
 from pathlib import Path
 
 if getattr(sys, "frozen", False):
@@ -12,7 +13,11 @@ for p in sorted(BASE.iterdir()):
     print("  ", p.name)
 print("=========================")
 
-sys.path.insert(0, str(BASE / "src"))
+src_top = BASE / "src"
+src_internal = BASE / "_internal" / "src"
+for p in (src_top, src_internal):
+    if p.exists() and str(p) not in sys.path:
+        sys.path.insert(0, str(p))
 
 import traceback
 import re
@@ -39,6 +44,23 @@ from llm_generating import generate_answer
 from save_jsonl import LOG_PATH, save_interaction
 
 executor = ThreadPoolExecutor(max_workers=2)
+def _log_dir() -> Path:
+    base = os.environ.get("LOCALAPPDATA")
+    if base:
+        return Path(base) / "FinLite" / "logs"
+    return Path.cwd() / "logs"
+
+# Configure server logger
+_LOG_DIR = _log_dir()
+_LOG_DIR.mkdir(parents=True, exist_ok=True)
+server_logger = logging.getLogger("server")
+if not server_logger.handlers:
+    server_logger.setLevel(logging.INFO)
+    fh = logging.FileHandler(str(_LOG_DIR / "server-errors.log"), encoding="utf-8")
+    fmt = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    fh.setFormatter(fmt)
+    server_logger.addHandler(fh)
+
 
 whisper_model = None
 
@@ -67,6 +89,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    tb = traceback.format_exc()
+    server_logger.error("Unhandled exception: %s\n%s", exc, tb)
+    payload = {"detail": str(exc)}
+    if os.environ.get("FINLITE_DEBUG") == "1":
+        payload["traceback"] = tb
+    return JSONResponse(status_code=500, content=payload)
 
 CHUNKS: List[str] = []
 FORMULA_TEMPLATES: Dict[str, Dict[str, str]] = {}
@@ -203,14 +236,16 @@ async def formula_helper(req: FormulaRequest):
     First checks for predefined templates, then falls back to LLM generation.
     """
     try:
-        # First, check if the prompt matches any predefined template
         template_key = find_matching_template(req.prompt)
         
         if template_key and template_key in FORMULA_TEMPLATES:
-            # Return predefined template
             template_data = FORMULA_TEMPLATES[template_key]
             formula = template_data["formula"]
             description = template_data["description"]
+            
+            final_response = f"**Formula Explanation:**\n{description}\n\n**Formula:**\n`{formula}`"
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(executor, save_interaction, req.prompt, [], final_response)
             
             return FormulaResponse(
                 explanation=description,
@@ -226,7 +261,8 @@ async def formula_helper(req: FormulaRequest):
         loop = asyncio.get_event_loop()
         raw_response = await loop.run_in_executor(executor, generate_answer, formula_prompt)
         
-        # Return the raw response directly in explanation field
+        await loop.run_in_executor(executor, save_interaction, req.prompt, [], raw_response.strip())
+
         return FormulaResponse(
             explanation=raw_response.strip(),
             formula="See explanation above"
@@ -241,7 +277,6 @@ async def get_formula_template(name: str):
     Get a predefined financial formula template by name
     """
     try:
-        # Check if the template exists (case-insensitive)
         template_key = None
         for key in FORMULA_TEMPLATES.keys():
             if key.upper() == name.upper():
@@ -284,19 +319,29 @@ async def initialize(req: Request):
     """
     Initialize the service with the provided Excel file.
     """
-    body = await req.json()
-    excel_path = body["path"]
+    try:
+        body = await req.json()
+        excel_path = body.get("path")
+        if not excel_path or not Path(excel_path).exists():
+            raise HTTPException(status_code=400, detail=f"Excel file not found: {excel_path}")
 
-    # Load Excel data
-    chunks = load_excel_data(excel_path)
-    build_index(chunks)
+        # Load Excel data
+        chunks = load_excel_data(excel_path)
+        if not chunks:
+            raise HTTPException(status_code=400, detail="No data rows found in the Excel file.")
 
-    set_current_chunks(chunks)
+        build_index(chunks)
+        set_current_chunks(chunks)
 
-    global CHUNKS
-    CHUNKS = chunks
-    
-    return {"status": "index rebuilt", "snippets": len(chunks)}
+        global CHUNKS
+        CHUNKS = chunks
+        
+        return {"status": "index rebuilt", "snippets": len(chunks)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Initialize failed: {e}")
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -321,12 +366,14 @@ async def chat(req: ChatRequest):
         
         answer = trim_to_first_answer(raw)
         
+        original_prompt = extract_original_prompt(req.prompt)
+        
         if req.snippets:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(executor, save_interaction, req.prompt, req.snippets, answer)
+            await loop.run_in_executor(executor, save_interaction, original_prompt, req.snippets, answer)
         else:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(executor, save_interaction, req.prompt, selected_chunks, answer)
+            await loop.run_in_executor(executor, save_interaction, original_prompt, selected_chunks, answer)
             
         return ChatResponse(response=answer)
     except HTTPException:
@@ -343,18 +390,22 @@ async def health():
 @app.get("/history")
 def get_history(limit: int = 5) -> List[Dict]:
     if not LOG_PATH.exists():
-        return []  # no history yet
-    buf = deque(maxlen=limit)
+        return []
+    valid_records = []
+    
     with open(LOG_PATH, "r", encoding="utf-8") as f:
         for i, line in enumerate(f):
             try:
                 rec = json.loads(line)
-                rec["_id"] = i
-                buf.append(rec)
+                if rec.get("prompt", "").strip():
+                    rec["_id"] = i
+                    valid_records.append(rec)
             except Exception:
                 continue
-    items = list(buf)
-    items.reverse()
+    
+    recent_records = valid_records[-limit:] if len(valid_records) > limit else valid_records
+    recent_records.reverse()
+    
     return [
         {
             "id": it.get("_id"),
@@ -362,7 +413,7 @@ def get_history(limit: int = 5) -> List[Dict]:
             "prompt": it.get("prompt", ""),
             "timestamp": it.get("timestamp", ""),
         }
-        for it in items
+        for it in recent_records
     ]
 
 @app.get("/history/{item_id}")
@@ -388,6 +439,14 @@ def _title_from_prompt(p: str, limit: int = 50) -> str:
 def trim_to_first_answer(text: str) -> str:
     parts = re.split(r"\n?(?:Question:|Selected range)", text, maxsplit=1)
     return parts[0].strip()
+
+def extract_original_prompt(prompt: str) -> str:
+    """Extract the original user prompt by removing system directives"""
+    if not prompt:
+        return prompt
+    
+    cleaned = re.sub(r'^\s*please\s+answer\s+(?:concisely|detailedly)\s*:\s*', '', prompt, flags=re.IGNORECASE)
+    return cleaned.strip()
 
 @app.get("/status")
 def get_status():

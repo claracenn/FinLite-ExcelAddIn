@@ -20,6 +20,7 @@ let isRecording = false;
 let mediaRecorder = null;
 let audioChunks = [];
 let recognition = null;
+let lastSendTime = 0;
 
 function setSpinner(on) {
     if (!spinner || !sendBtn) return;
@@ -174,6 +175,13 @@ ${result.explanation}
    const raw = (promptEl.value || '').trim();
    if (!raw) return;
 
+   // Prevent rapid submissions
+   const now = Date.now();
+   if (now - lastSendTime < 1000) {
+     return;
+   }
+   lastSendTime = now;
+
    const clean = stripSystemDirectives(raw);   
    history.push({ role: 'user', text: clean });
    renderChatHistory();
@@ -250,7 +258,11 @@ function renderHistoryItems(items) {
     return;
   }
 
-  for (const it of items) {
+  const validItems = items.filter(item => {
+    return item && item.prompt && item.prompt.trim() && item.id !== undefined;
+  });
+
+  for (const it of validItems) {
     const item = document.createElement('div');
     item.className = 'history-item';
 

@@ -1,4 +1,4 @@
-import sys, json
+import sys, json, os
 from pathlib import Path
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -17,23 +17,42 @@ INDEX_PATH = cfg["INDEX_PATH"]
 _encoder = SentenceTransformer(str(ROOT / EMBEDDING_MODEL))
 _index = None
 
+def _user_data_dir() -> Path:
+    base = os.environ.get("LOCALAPPDATA")
+    if base:
+        return Path(base) / "FinLite"
+    # Fallback
+    return Path.home() / "AppData" / "Local" / "FinLite"
+
+def _resolved_index_path() -> Path:
+    p = Path(INDEX_PATH)
+    if p.is_absolute():
+        return p
+    # Use user-writable dir when frozen; else keep alongside project root
+    if getattr(sys, "frozen", False):
+        return _user_data_dir() / p.name
+    return (ROOT / p)
+
 def build_index(chunks: list[str]) -> None:
     embs = _encoder.encode(chunks, convert_to_numpy=True)
     dim = embs.shape[1]
     idx = faiss.IndexFlatL2(dim)
     idx.add(embs)
-    faiss.write_index(idx, INDEX_PATH)
+    out_path = _resolved_index_path()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    faiss.write_index(idx, str(out_path))
 
 def load_index():
     global _index
     if _index is None:
         try:
-            if Path(INDEX_PATH).exists():
-                _index = faiss.read_index(INDEX_PATH)
+            ip = _resolved_index_path()
+            if ip.exists():
+                _index = faiss.read_index(str(ip))
             else:
                 return None
         except Exception as e:
-            print(f"Warning: Failed to load index from {INDEX_PATH}: {e}")
+            print(f"Warning: Failed to load index from {_resolved_index_path()}: {e}")
             return None
     return _index
 
