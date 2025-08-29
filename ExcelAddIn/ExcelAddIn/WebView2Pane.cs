@@ -76,7 +76,7 @@ namespace ExcelAddIn
                     }
                 case "help":
                     {
-                        var help = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "help.html");
+                        var help = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ui", "help.html");
                         if (File.Exists(help))
                             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(help) { UseShellExecute = true });
                         else
