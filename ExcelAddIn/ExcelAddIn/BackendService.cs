@@ -13,11 +13,12 @@ namespace ExcelAddIn
         private static Process _proc;
         private static readonly Uri _baseUri = new Uri("http://127.0.0.1:8000");
 
-        public static async Task EnsureStartedAsync()
+    public static async Task EnsureStartedAsync()
         {
             try
             {
-                if (await IsHealthyAsync(TimeSpan.FromMilliseconds(1))) return;
+        // Probe for an already-running backend before spawning
+        if (await IsHealthyAsync(TimeSpan.FromSeconds(2))) return;
 
                 lock (_gate)
                 {
@@ -25,6 +26,7 @@ namespace ExcelAddIn
 
                     var baseDir = AppDomain.CurrentDomain.BaseDirectory;
                     var backendDir = Path.Combine(baseDir, "backend");
+                    Trace.WriteLine($"[FinLite] EnsureStarted: baseDir={baseDir}, backendDir={backendDir}");
 
                     string exePath = null;
                     var candidates = new[]
@@ -35,7 +37,7 @@ namespace ExcelAddIn
                     };
                     foreach (var c in candidates)
                     {
-                        if (File.Exists(c)) { exePath = c; break; }
+                        if (File.Exists(c)) { exePath = c; Trace.WriteLine($"[FinLite] Found backend exe: {exePath}"); break; }
                     }
 
                     if (exePath == null)
@@ -43,6 +45,7 @@ namespace ExcelAddIn
                         // Fallback: try python runner if present
                         var pyExe = Path.Combine(backendDir, "pyembed", "python.exe");
                         var runPy = Path.Combine(backendDir, "app", "run_server.py");
+                        Trace.WriteLine($"[FinLite] Backend exe not found. Trying python fallback: py={pyExe}, script={runPy}");
                         if (File.Exists(pyExe) && File.Exists(runPy))
                         {
                             var psiPy = new ProcessStartInfo
@@ -57,6 +60,11 @@ namespace ExcelAddIn
                             };
                             _proc = Process.Start(psiPy);
                             HookLogs(_proc);
+                            Trace.WriteLine("[FinLite] Started backend via embedded python");
+                        }
+                        else
+                        {
+                            Trace.WriteLine("[FinLite][Error] No backend executable or python fallback found. Ensure backend is copied to ExcelAddIn/backend.");
                         }
                     }
                     else
@@ -72,13 +80,19 @@ namespace ExcelAddIn
                         };
                         _proc = Process.Start(psi);
                         HookLogs(_proc);
+            Trace.WriteLine($"[FinLite] Started backend exe: {exePath}");
                     }
                 }
 
                 // Wait for health
-                await IsHealthyAsync(TimeSpan.FromSeconds(15));
+                var healthy = await IsHealthyAsync(TimeSpan.FromSeconds(15));
+        Trace.WriteLine($"[FinLite] Backend health: {healthy}");
             }
-            catch { /* handled by UI/logs elsewhere */ }
+            catch (Exception ex)
+            {
+        Trace.WriteLine($"[FinLite][Error] EnsureStartedAsync error: {ex}");
+                throw;
+            }
         }
 
     public static void Stop()
@@ -91,11 +105,37 @@ namespace ExcelAddIn
                     if (!_proc.HasExited)
                     {
                         try { _proc.CloseMainWindow(); } catch { }
-            try { if (!_proc.WaitForExit(1000)) _proc.Kill(); } catch { }
+                        try { if (!_proc.WaitForExit(1500)) _proc.Kill(); } catch { }
                     }
                     _proc.Dispose();
                     _proc = null;
                 }
+
+                // Kill by pid file as a safety net (if process handle was lost)
+                try
+                {
+                    var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FinLite", "logs");
+                    var pidPath = Path.Combine(dir, "backend.pid");
+                    if (File.Exists(pidPath))
+                    {
+                        var text = File.ReadAllText(pidPath).Trim();
+                        if (int.TryParse(text, out var pid))
+                        {
+                            try
+                            {
+                                var p = Process.GetProcessById(pid);
+                                if (!p.HasExited)
+                                {
+                                    try { p.CloseMainWindow(); } catch { }
+                                    try { if (!p.WaitForExit(1000)) p.Kill(); } catch { }
+                                }
+                            }
+                            catch { }
+                        }
+                        try { File.Delete(pidPath); } catch { }
+                    }
+                }
+                catch { }
             }
             catch { }
         }
@@ -136,6 +176,7 @@ namespace ExcelAddIn
                 p.ErrorDataReceived +=  (_, e) => { if (e.Data != null) Append(errLog, e.Data); };
                 try { p.BeginOutputReadLine(); } catch { }
                 try { p.BeginErrorReadLine(); } catch { }
+                Trace.WriteLine($"[FinLite] Hooked backend logs: {outLog}, {errLog}");
             }
             catch { }
         }

@@ -15,6 +15,10 @@ pyinstaller --clean --noconfirm ^
   --collect-all uvicorn ^
   --collect-all pydantic ^
   --collect-all faster_whisper ^
+  --collect-all ctranslate2 ^
+  --collect-all tokenizers ^
+  --collect-all safetensors ^
+  --collect-all huggingface_hub ^
   --collect-all starlette ^
   --collect-all anyio ^
   --collect-all sniffio ^

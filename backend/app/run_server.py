@@ -26,7 +26,7 @@ import pandas as pd
 import asyncio
 from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from collections import deque
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,10 +34,11 @@ from pydantic import BaseModel
 from faster_whisper import WhisperModel
 import tempfile
 import shutil
+from functools import partial
 
 import uvicorn
 
-from table_main    import rag_pipeline, set_current_chunks, load_excel_data
+from table_main    import rag_pipeline, set_current_chunks, load_excel_data, get_current_chunks
 from llm_embedding import build_index
 from table_linearizer import linearize
 from llm_generating import generate_answer
@@ -61,6 +62,7 @@ if not server_logger.handlers:
     fh.setFormatter(fmt)
     server_logger.addHandler(fh)
 
+PID_FILE = _LOG_DIR / "backend.pid"
 
 whisper_model = None
 
@@ -73,11 +75,21 @@ def get_whisper_model():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    try:
+        with open(PID_FILE, "w", encoding="utf-8") as f:
+            f.write(str(os.getpid()))
+    except Exception:
+        pass
     load_formula_templates()
     print("Server started. Waiting for Excel file to be loaded...")
     
     yield
     # Shutdown
+    try:
+        if PID_FILE.exists():
+            PID_FILE.unlink()
+    except Exception:
+        pass
     executor.shutdown(wait=True)
 
 app = FastAPI(title="ExcelRAG Service", lifespan=lifespan)
@@ -159,6 +171,7 @@ class ChatRequest(BaseModel):
     prompt: str
     snippets: Optional[List[str]] = None
     detailed: Optional[bool] = False
+    session_id: Optional[str] = None
 
 class ChatResponse(BaseModel):
     response: str
@@ -171,6 +184,7 @@ class FormulaRequest(BaseModel):
     user_selection: Optional[str] = ""
     active_cell: Optional[str] = ""
     occupied_ranges: Optional[List[str]] = []
+    session_id: Optional[str] = ""
 
 class FormulaResponse(BaseModel):
     explanation: str
@@ -245,7 +259,17 @@ async def formula_helper(req: FormulaRequest):
             
             final_response = f"**Formula Explanation:**\n{description}\n\n**Formula:**\n`{formula}`"
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(executor, save_interaction, req.prompt, [], final_response)
+            await loop.run_in_executor(
+                executor,
+                partial(
+                    save_interaction,
+                    req.prompt,
+                    [],
+                    final_response,
+                    session_id=req.session_id or "",
+                    mode="formula",
+                ),
+            )
             
             return FormulaResponse(
                 explanation=description,
@@ -261,7 +285,17 @@ async def formula_helper(req: FormulaRequest):
         loop = asyncio.get_event_loop()
         raw_response = await loop.run_in_executor(executor, generate_answer, formula_prompt)
         
-        await loop.run_in_executor(executor, save_interaction, req.prompt, [], raw_response.strip())
+        await loop.run_in_executor(
+            executor,
+            partial(
+                save_interaction,
+                req.prompt,
+                [],
+                raw_response.strip(),
+                session_id=req.session_id or "",
+                mode="formula",
+            ),
+        )
 
         return FormulaResponse(
             explanation=raw_response.strip(),
@@ -351,29 +385,52 @@ async def chat(req: ChatRequest):
     """
     try:
         if req.snippets:
+            # Cell selected, use selected snippet + RAG
+            loop = asyncio.get_event_loop()
+            selected_chunks, _ = await loop.run_in_executor(executor, rag_pipeline, req.prompt, req.detailed)
+            
+            combined_snippets = req.snippets.copy()
+            for chunk in selected_chunks:
+                if chunk not in combined_snippets:
+                    combined_snippets.append(chunk)
+            
             full_prompt = (
-                "You are a helpful assistant. Use only the provided table data to answer the question.\n\n"
-                + "\n".join(req.snippets)
+                "You are a helpful assistant. Use the provided table data to answer the question.\n\n"
+                + "\n".join(combined_snippets)
                 + f"\n\nQuestion: {req.prompt}\nAnswer:"
             )
             loop = asyncio.get_event_loop()
             raw = await loop.run_in_executor(executor, generate_answer, full_prompt, req.detailed)
+            answer = trim_to_first_answer(raw)
+            used_snippets = combined_snippets
+        
         else:
+            # No specific cell selection, try RAG with full index
             loop = asyncio.get_event_loop()
             selected_chunks, raw = await loop.run_in_executor(executor, rag_pipeline, req.prompt, req.detailed)
-            if selected_chunks == []:
-                return ChatResponse(response=raw)
-        
-        answer = trim_to_first_answer(raw)
+            
+            if selected_chunks:
+                answer = trim_to_first_answer(raw)
+                used_snippets = selected_chunks
+            else:
+                answer = raw
+                used_snippets = []
         
         original_prompt = extract_original_prompt(req.prompt)
         
-        if req.snippets:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(executor, save_interaction, original_prompt, req.snippets, answer)
-        else:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(executor, save_interaction, original_prompt, selected_chunks, answer)
+        # Save interaction with the actually used snippets
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            executor,
+            partial(
+                save_interaction,
+                original_prompt,
+                used_snippets,
+                answer,
+                session_id=req.session_id,
+                mode="chat",
+            ),
+        )
             
         return ChatResponse(response=answer)
     except HTTPException:
@@ -412,24 +469,11 @@ def get_history(limit: int = 5) -> List[Dict]:
             "title": _title_from_prompt(it.get("prompt", "")),
             "prompt": it.get("prompt", ""),
             "timestamp": it.get("timestamp", ""),
+            "session_id": it.get("session_id", ""),
+            "mode": it.get("mode", "chat"),
         }
         for it in recent_records
     ]
-
-@app.get("/history/{item_id}")
-def get_history_item(item_id: int) -> Dict:
-    if not LOG_PATH.exists():
-        raise HTTPException(status_code=404, detail="No history")
-    with open(LOG_PATH, "r", encoding="utf-8") as f:
-        for i, line in enumerate(f):
-            if i == item_id:
-                try:
-                    rec = json.loads(line)
-                    rec["_id"] = i
-                    return rec
-                except Exception:
-                    break
-    raise HTTPException(status_code=404, detail="Not found")
 
 
 def _title_from_prompt(p: str, limit: int = 50) -> str:
@@ -447,6 +491,153 @@ def extract_original_prompt(prompt: str) -> str:
     
     cleaned = re.sub(r'^\s*please\s+answer\s+(?:concisely|detailedly)\s*:\s*', '', prompt, flags=re.IGNORECASE)
     return cleaned.strip()
+
+def _group_records_by_session(records: List[Dict]) -> Dict[str, List[Tuple[int, Dict]]]:
+    grouped: Dict[str, List[Tuple[int, Dict]]] = {}
+    for idx, rec in records:
+        sid = str(rec.get("session_id") or "")
+        if not sid:
+            continue
+        grouped.setdefault(sid, []).append((idx, rec))
+    return grouped
+
+@app.get("/history/grouped")
+def get_history_grouped(limit: int = 10) -> List[Dict]:
+    """Return grouped conversations by session_id (newest first).
+
+    Each item contains: session_id, turns, first_prompt, last_timestamp, ids
+    """
+    if not LOG_PATH.exists():
+        return []
+    records: List[Tuple[int, Dict]] = []
+    with open(LOG_PATH, "r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            try:
+                rec = json.loads(line)
+                if (rec.get("prompt", "") or rec.get("response", "")) and rec.get("session_id"):
+                    records.append((i, rec))
+            except Exception:
+                continue
+    if not records:
+        return []
+    grouped = _group_records_by_session(records)
+    items = []
+    for sid, pairs in grouped.items():
+        pairs_sorted = sorted(pairs, key=lambda x: x[0])
+        first = pairs_sorted[0][1]
+        last = pairs_sorted[-1][1]
+        items.append({
+            "session_id": sid,
+            "turns": len(pairs_sorted),
+            "first_prompt": first.get("prompt", ""),
+            "last_timestamp": last.get("timestamp", ""),
+            "ids": [i for i, _ in pairs_sorted],
+        })
+
+    def _sort_key(it):
+        ts = it.get("last_timestamp") or ""
+        return (ts, max(it.get("ids") or [-1]))
+    items.sort(key=_sort_key, reverse=True)
+    return items[:limit]
+
+@app.get("/history/unified")
+def get_history_unified(limit: int = 10) -> List[Dict]:
+        """Return grouped sessions with a stable shape.
+
+        Shape: [{
+            "session_id": str,
+            "turns": int,
+            "first_prompt": str,
+            "last_timestamp": str,
+            "ids": [int]
+        }]
+        """
+        return get_history_grouped(limit)
+
+@app.get("/history/session/{session_id}")
+def get_history_session(session_id: str) -> Dict:
+    """Return full conversation for a session id."""
+    if not LOG_PATH.exists():
+        raise HTTPException(status_code=404, detail="No history")
+    records: List[Tuple[int, Dict]] = []
+    with open(LOG_PATH, "r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            try:
+                rec = json.loads(line)
+                sid = str(rec.get("session_id") or f"line-{i}")
+                if sid == session_id:
+                    rec["_id"] = i
+                    records.append((i, rec))
+            except Exception:
+                continue
+    if not records:
+        raise HTTPException(status_code=404, detail="Session not found")
+    records.sort(key=lambda x: x[0])
+    return {
+        "session_id": session_id,
+        "title": _title_from_prompt(records[0][1].get("prompt", "")),
+        "turns": len(records),
+        "items": [
+            {
+                "id": i,
+                "prompt": rec.get("prompt", ""),
+                "response": rec.get("response", ""),
+                "timestamp": rec.get("timestamp", ""),
+            }
+            for i, rec in records
+        ]
+    }
+
+@app.get("/history/{item_id}")
+def get_history_item(item_id: int) -> Dict:
+    if not LOG_PATH.exists():
+        raise HTTPException(status_code=404, detail="No history")
+    with open(LOG_PATH, "r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            if i == item_id:
+                try:
+                    rec = json.loads(line)
+                    rec["_id"] = i
+                    return rec
+                except Exception:
+                    break
+    raise HTTPException(status_code=404, detail="Not found")
+
+@app.post("/history/open")
+async def post_history_open(req: Request) -> Dict:
+    """Open a session or single record via one endpoint.
+
+    Body: { "session_id": str } OR { "id": int }
+    Returns: full session if possible; otherwise single record.
+    """
+    body = await req.json()
+    sid = str(body.get("session_id") or "").strip()
+    if sid:
+        return get_history_session(sid)
+
+    if "id" in body:
+        try:
+            target_id = int(body["id"])
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid id")
+
+        if not LOG_PATH.exists():
+            raise HTTPException(status_code=404, detail="No history")
+        with open(LOG_PATH, "r", encoding="utf-8") as f:
+            for i, line in enumerate(f):
+                if i == target_id:
+                    try:
+                        rec = json.loads(line)
+                        rec["_id"] = i
+                        rec_sid = str(rec.get("session_id") or "").strip()
+                        if rec_sid:
+                            return get_history_session(rec_sid)
+                        return rec
+                    except Exception:
+                        break
+        raise HTTPException(status_code=404, detail="Not found")
+
+    raise HTTPException(status_code=400, detail="session_id or id required")
 
 @app.get("/status")
 def get_status():

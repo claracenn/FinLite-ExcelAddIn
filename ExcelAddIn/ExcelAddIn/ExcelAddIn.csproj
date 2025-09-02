@@ -203,6 +203,14 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Content Update="ui\**\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="backend\**\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="Microsoft.Office.Tools.v4.0.Framework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <Private>False</Private>
     </Reference>
@@ -284,6 +292,18 @@
     </Compile>
     <Content Include="backend\python311.dll" />
     <Content Include="backend\python311.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="backend\run_server.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="backend\run_server.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="backend\run_server.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="backend\run_server.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="backend\run_server.exe">
@@ -2868,6 +2888,7 @@
     <Content Include="backend\_internal\regex-2025.7.34.dist-info\top_level.txt" />
     <Content Include="backend\_internal\requests-2.32.4.dist-info\top_level.txt" />
     <Content Include="backend\_internal\scipy.libs\libscipy_openblas-6b2103f2ae4d8547998b5d188e9801fb.dll" />
+    <Content Include="backend\_internal\scipy.libs\libscipy_openblas-6b2103f2ae4d8547998b5d188e9801fb.dll" />
     <Content Include="backend\_internal\sentence_transformers-5.1.0.dist-info\licenses\NOTICE.txt" />
     <Content Include="backend\_internal\sentence_transformers-5.1.0.dist-info\top_level.txt" />
     <Content Include="backend\_internal\sentence_transformers\backend\load.py" />
@@ -3072,14 +3093,74 @@
     <Content Include="backend\_internal\sniffio\_tests\__init__.py" />
     <Content Include="backend\_internal\sniffio\_version.py" />
     <Content Include="backend\_internal\sniffio\__init__.py" />
+    <Content Include="backend\_internal\snowballstemmer-3.0.1.dist-info\top_level.txt" />
+    <Content Include="backend\_internal\snowballstemmer\among.py" />
+    <Content Include="backend\_internal\snowballstemmer\arabic_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\armenian_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\basestemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\basque_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\catalan_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\danish_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\dutch_porter_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\dutch_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\english_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\esperanto_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\estonian_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\finnish_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\french_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\german_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\greek_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\hindi_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\hungarian_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\indonesian_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\irish_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\italian_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\lithuanian_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\nepali_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\norwegian_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\porter_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\portuguese_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\romanian_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\russian_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\serbian_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\spanish_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\swedish_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\tamil_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\turkish_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\yiddish_stemmer.py" />
+    <Content Include="backend\_internal\snowballstemmer\__init__.py" />
     <Content Include="backend\_internal\sqlite3.dll" />
     <Content Include="backend\_internal\src\llm_embedding.py" />
+    <Content Include="backend\_internal\src\llm_embedding.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="backend\_internal\src\llm_generating.py" />
+    <Content Include="backend\_internal\src\llm_generating.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="backend\_internal\src\request_serializer.py" />
+    <Content Include="backend\_internal\src\request_serializer.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="backend\_internal\src\retrieval.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="backend\_internal\src\save_jsonl.py" />
+    <Content Include="backend\_internal\src\save_jsonl.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="backend\_internal\src\table_linearizer.py" />
+    <Content Include="backend\_internal\src\table_linearizer.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="backend\_internal\src\table_main.py" />
+    <Content Include="backend\_internal\src\table_main.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="backend\_internal\src\__init__.py" />
+    <Content Include="backend\_internal\src\__init__.py">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="backend\_internal\starlette\applications.py" />
     <Content Include="backend\_internal\starlette\authentication.py" />
     <Content Include="backend\_internal\starlette\background.py" />
@@ -3114,6 +3195,9 @@
     <Content Include="backend\_internal\starlette\_exception_handler.py" />
     <Content Include="backend\_internal\starlette\_utils.py" />
     <Content Include="backend\_internal\starlette\__init__.py" />
+    <Content Include="backend\_internal\stopwordsiso-0.6.1.dist-info\top_level.txt" />
+    <Content Include="backend\_internal\stopwordsiso\_core.py" />
+    <Content Include="backend\_internal\stopwordsiso\__init__.py" />
     <Content Include="backend\_internal\torch-2.8.0.dist-info\entry_points.txt" />
     <Content Include="backend\_internal\torch-2.8.0.dist-info\top_level.txt" />
     <Content Include="backend\_internal\torch\accelerator\_utils.py" />
@@ -16462,6 +16546,24 @@
     <Content Include="backend\fin_formula.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="backend\config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="backend\fin_formula.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="backend\config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="backend\fin_formula.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="backend\config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="backend\fin_formula.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <None Include="backend\models\all-MiniLM-L6-v2\.cache\huggingface\download\.gitattributes.metadata" />
     <None Include="backend\models\all-MiniLM-L6-v2\.cache\huggingface\download\1_Pooling\config.json.metadata" />
     <None Include="backend\models\all-MiniLM-L6-v2\.cache\huggingface\download\config.json.metadata" />
@@ -18515,6 +18617,12 @@
     <None Include="backend\_internal\sniffio-1.3.1.dist-info\RECORD" />
     <None Include="backend\_internal\sniffio-1.3.1.dist-info\WHEEL" />
     <None Include="backend\_internal\sniffio\py.typed" />
+    <None Include="backend\_internal\snowballstemmer-3.0.1.dist-info\INSTALLER" />
+    <None Include="backend\_internal\snowballstemmer-3.0.1.dist-info\licenses\COPYING" />
+    <None Include="backend\_internal\snowballstemmer-3.0.1.dist-info\METADATA" />
+    <None Include="backend\_internal\snowballstemmer-3.0.1.dist-info\RECORD" />
+    <None Include="backend\_internal\snowballstemmer-3.0.1.dist-info\REQUESTED" />
+    <None Include="backend\_internal\snowballstemmer-3.0.1.dist-info\WHEEL" />
     <None Include="backend\_internal\src\__pycache__\llm_embedding.cpython-311.pyc" />
     <None Include="backend\_internal\src\__pycache__\llm_generating.cpython-311.pyc" />
     <None Include="backend\_internal\src\__pycache__\request_serializer.cpython-311.pyc" />
@@ -18528,6 +18636,12 @@
     <None Include="backend\_internal\starlette-0.47.2.dist-info\RECORD" />
     <None Include="backend\_internal\starlette-0.47.2.dist-info\WHEEL" />
     <None Include="backend\_internal\starlette\py.typed" />
+    <None Include="backend\_internal\stopwordsiso-0.6.1.dist-info\INSTALLER" />
+    <None Include="backend\_internal\stopwordsiso-0.6.1.dist-info\METADATA" />
+    <None Include="backend\_internal\stopwordsiso-0.6.1.dist-info\RECORD" />
+    <None Include="backend\_internal\stopwordsiso-0.6.1.dist-info\REQUESTED" />
+    <None Include="backend\_internal\stopwordsiso-0.6.1.dist-info\WHEEL" />
+    <None Include="backend\_internal\stopwordsiso\stopwords-iso.json" />
     <None Include="backend\_internal\tokenizers-0.21.4.dist-info\INSTALLER" />
     <None Include="backend\_internal\tokenizers-0.21.4.dist-info\METADATA" />
     <None Include="backend\_internal\tokenizers-0.21.4.dist-info\RECORD" />

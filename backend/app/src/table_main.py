@@ -20,6 +20,7 @@ EXCEL_FILE = cfg.get("EXCEL_FILE")
 K = cfg.get("K", 5)
 ANSWERABILITY_THRESHOLD = cfg.get("ANSWERABILITY_THRESHOLD", 0.15)
 EVIDENCE_OVERLAP_THRESHOLD = cfg.get("EVIDENCE_OVERLAP_THRESHOLD", 0.15)
+D_WORD_LIMIT = int(cfg.get("DETAILED_WORD_LIMIT", 200))
 
 _current_chunks: list[str] = []
 
@@ -106,6 +107,7 @@ def _build_prompt(selected: list[str], prompt: str, detailed: bool) -> str:
         "If evidence is insufficient, reply with 'Insufficient evidence' and request a more specific query.",
         "Cite or reference the most relevant rows when helpful.",
         "Be accurate and avoid unsupported assumptions.",
+        f"Keep the final answer under approximately {D_WORD_LIMIT} words while remaining clear.",
         taxonomy,
         "",
         context,

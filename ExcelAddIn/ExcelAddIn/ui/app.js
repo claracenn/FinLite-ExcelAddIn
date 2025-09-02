@@ -21,6 +21,11 @@ let mediaRecorder = null;
 let audioChunks = [];
 let recognition = null;
 let lastSendTime = 0;
+let sessionId = (window.crypto?.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+
+function newSession() {
+  sessionId = (window.crypto?.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+}
 
 function setSpinner(on) {
     if (!spinner || !sendBtn) return;
@@ -44,6 +49,7 @@ function escapeHtml(s) {
 function startNewConversation() {
   chatClear();
   web?.postMessage(JSON.stringify({ type: 'reset' }));
+  newSession();
   toast('Started a new chat');
   promptEl?.focus();
 }
@@ -128,7 +134,8 @@ async function handleFormulaRequest(prompt) {
                 prompt: prompt,
                 user_selection: '',
                 active_cell: '',
-                occupied_ranges: []
+                occupied_ranges: [],
+                session_id: sessionId
             })
         });
 
@@ -202,20 +209,28 @@ ${result.explanation}
    if (verbosity === 'Formula') {
      handleFormulaRequest(clean);
    } else {
+     console.log('Sending ask message with sessionId:', sessionId);
      web?.postMessage(JSON.stringify({
        type: 'ask',
        prompt: clean, 
-       verbosity: verbosity
+    verbosity: verbosity,
+    session_id: sessionId
      }));
    }
  }
 
 function toggleHistoryPopover() {
-  if (!historyPopover) return;
+  console.log('toggleHistoryPopover called');
+  if (!historyPopover) {
+    console.log('historyPopover not found');
+    return;
+  }
   if (historyPopover.hidden) {
+    console.log('Opening history popover, sending history request');
     web?.postMessage(JSON.stringify({ type: 'history' }));
     historyPopover.hidden = false;
   } else {
+    console.log('Closing history popover');
     historyPopover.hidden = true;
   }
 }
@@ -252,10 +267,15 @@ function fmtShortTime(ms) {
 }
 
 function renderHistoryItems(items) {
-  if (!historyList) return;
+  console.log('renderHistoryItems called with:', items);
+  if (!historyList) {
+    console.log('historyList not found');
+    return;
+  }
   historyList.innerHTML = '';
 
   if (!items || items.length === 0) {
+    console.log('No history items to render');
     const empty = document.createElement('div');
     empty.className = 'history-item';
     empty.style.opacity = 0.7;
@@ -264,20 +284,37 @@ function renderHistoryItems(items) {
     return;
   }
 
-  const validItems = items.filter(item => {
-    return item && item.prompt && item.prompt.trim() && item.id !== undefined;
+  console.log('Processing', items.length, 'history items');
+
+  // Support both grouped (session) items and legacy flat items
+  const normalized = items.map((it, index) => {
+    console.log(`Processing item ${index}:`, it);
+    if (it && typeof it === 'object' && it.session_id) {
+      return {
+        session_id: it.session_id,
+        title: stripSystemDirectives(it.first_prompt || it.title || 'New Chat'),
+        timestamp: it.last_timestamp || it.timestamp || '',
+        turns: it.turns || 1
+      };
+    }
+    // For flat items, ensure we preserve the id
+    const normalized = {
+      id: it?.id !== undefined ? it.id : index, // Use index as fallback if id is missing
+      title: stripSystemDirectives(it?.prompt || it?.title || 'New Chat'),
+      timestamp: it?.timestamp || ''
+    };
+    console.log(`Normalized item ${index}:`, normalized);
+    return normalized;
   });
 
-  for (const it of validItems) {
+  for (const it of normalized) {
     const item = document.createElement('div');
     item.className = 'history-item';
 
     const titleEl = document.createElement('div');
     titleEl.className = 'history-item-title';
-    const rawTitle = it.prompt || it.title || 'New Chat';
-    const safeTitle = stripSystemDirectives(rawTitle);
-    titleEl.title = safeTitle;
-    titleEl.textContent = safeTitle;
+    titleEl.title = it.title;
+    titleEl.textContent = it.title;
 
     const timeEl = document.createElement('div');
     timeEl.className = 'history-item-time';
@@ -288,9 +325,16 @@ function renderHistoryItems(items) {
     item.appendChild(timeEl);
 
     item.addEventListener('click', () => {
+      console.log('History item clicked:', it);
       historyPopover.hidden = true;
-      if (it.id !== undefined && it.id !== null) {
+      if (it.session_id) {
+        console.log('Sending history-item request with session_id:', it.session_id);
+        web?.postMessage(JSON.stringify({ type: 'history-item', session_id: it.session_id }));
+      } else if (it.id !== undefined && it.id !== null) {
+        console.log('Sending history-item request with id:', it.id);
         web?.postMessage(JSON.stringify({ type: 'history-item', id: it.id }));
+      } else {
+        console.log('No valid session_id or id found in item');
       }
     });
 
@@ -537,18 +581,65 @@ document.addEventListener('keydown', (e) => {
 
 // Host -> Web
 web?.addEventListener('message', (ev) => {
+    console.log('Received message from host:', ev.data);
     try {
         const msg = JSON.parse(ev.data || "{}");
+        console.log('Parsed message:', msg);
         switch (msg.type) {
             case 'history-data':
+                console.log('Received history-data:', msg.items);
                 renderHistoryItems(msg.items || []);
                 break;
             case 'history-item-data': {
+                console.log('Received history-item-data:', msg);
                 const it = msg.item || {};
+                console.log('Processing item:', it);
+                console.log('Current sessionId before update:', sessionId);
+                if (it.session_id && typeof it.session_id === 'string') {
+                  sessionId = it.session_id;
+                  console.log('Set sessionId to:', sessionId);
+                } else {
+                  console.log('Not updating sessionId. it.session_id:', it.session_id, 'type:', typeof it.session_id);
+                }
                 chatClear();
-                pushToHistory({ role: 'user', text: stripSystemDirectives(it.prompt || '') });
-                pushToHistory({ role: 'assistant', text: it.response || '', md: true });
+                console.log('Chat cleared, history length now:', history.length);
+                
+                if (Array.isArray(it.items)) {
+                  console.log('Processing items array with length:', it.items.length);
+                  console.log('Full items array:', it.items);
+                  // Session conversation
+                  for (let i = 0; i < it.items.length; i++) {
+                    const turn = it.items[i];
+                    console.log(`Processing turn ${i}:`, turn);
+                    if (turn.prompt && turn.prompt.trim()) {
+                      const userText = stripSystemDirectives(turn.prompt || '');
+                      console.log(`Adding user message ${i}:`, userText);
+                      pushToHistory({ role: 'user', text: userText });
+                    }
+                    if (turn.response && turn.response.trim()) {
+                      console.log(`Adding assistant message ${i}:`, turn.response);
+                      pushToHistory({ role: 'assistant', text: turn.response || '', md: true });
+                    }
+                  }
+                } else {
+                  console.log('Processing single item fallback');
+                  // Single record fallback
+                  const userText = stripSystemDirectives(it.prompt || '');
+                  const assistantText = it.response || '';
+                  
+                  if (userText.trim()) {
+                    console.log('Adding single user message:', userText);
+                    pushToHistory({ role: 'user', text: userText });
+                  }
+                  if (assistantText.trim()) {
+                    console.log('Adding single assistant message:', assistantText);
+                    pushToHistory({ role: 'assistant', text: assistantText, md: true });
+                  }
+                }
+                console.log('Final history length:', history.length);
+                console.log('Final history:', history);
                 renderChatHistory();
+                console.log('After renderChatHistory, ansEl.innerHTML length:', ansEl?.innerHTML?.length || 0);
                 ansEl?.scrollTo({ top: ansEl.scrollHeight, behavior: 'smooth' });
                 break;
             }

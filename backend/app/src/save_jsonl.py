@@ -13,30 +13,47 @@ cfg = _json.loads((ROOT / "config.json").read_text())
 LOG_PATH = Path(cfg["LOG_JSONL"])
 LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-def save_interaction(prompt: str, snippets: list[str], response: str):
-    """Save interaction to log file with short-term deduplication check"""
-    record = serialize_request(prompt, snippets, response)
-    
-    current_time = datetime.fromisoformat(record["timestamp"].replace('Z', '+00:00'))
-    
+def save_interaction(
+    prompt: str,
+    snippets: list[str],
+    response: str,
+    *,
+    session_id: str | None = None,
+    mode: str = "chat",
+    meta: dict | None = None,
+):
+    """Save interaction to log file with short-term deduplication check."""
+    if not session_id:
+        return
+        
+    record = serialize_request(prompt, snippets, response, session_id=session_id, mode=mode, meta=meta)
+
+    try:
+        current_time = datetime.fromisoformat(record["timestamp"].replace('Z', '+00:00'))
+    except Exception:
+        current_time = datetime.utcnow()
+
     if LOG_PATH.exists():
         try:
             with open(LOG_PATH, "r", encoding="utf-8") as f:
                 lines = f.readlines()
-                # Check only the last 2-3 entries for very recent duplicates
-                for line in lines[-3:]:
+                for line in lines[-5:]:
                     try:
                         existing = json.loads(line.strip())
-                        if (existing.get("prompt", "").strip() == prompt.strip() and 
-                            existing.get("response", "").strip() == response.strip()):
-                            existing_time = datetime.fromisoformat(existing["timestamp"].replace('Z', '+00:00'))
-                            time_diff = abs((current_time - existing_time).total_seconds())
-                            if time_diff < 3: 
+                        if (
+                            existing.get("prompt", "").strip() == prompt.strip()
+                            and existing.get("response", "").strip() == response.strip()
+                            and (existing.get("session_id", "") == (session_id or ""))
+                            and (existing.get("mode", "chat") == (mode or "chat"))
+                        ):
+                            existing_time_raw = existing.get("timestamp", "")
+                            existing_time = datetime.fromisoformat(str(existing_time_raw).replace('Z', '+00:00'))
+                            if abs((current_time - existing_time).total_seconds()) < 5:
                                 return
                     except (json.JSONDecodeError, ValueError, KeyError):
                         continue
         except Exception:
-            pass 
+            pass
 
     with open(LOG_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
