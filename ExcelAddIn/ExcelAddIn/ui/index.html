@@ -151,6 +151,79 @@
         color: #323130;
         border-bottom-left-radius: 4px;
         border: 1px solid #e1dfdd;
+        position: relative;
+    }
+    
+    /* Copy button styles */
+    .copy-button {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        background: #ffffff;
+        border: 1px solid #d1d1d1;
+        border-radius: 4px;
+        padding: 4px 6px;
+        cursor: pointer;
+        font-size: 11px;
+        color: #605e5c;
+        display: none;
+        align-items: center;
+        gap: 3px;
+        transition: all 0.2s ease;
+        z-index: 10;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        font-family: var(--font-family);
+        white-space: nowrap;
+    }
+    
+    .copy-button:hover {
+        background: #f3f2f1;
+        border-color: #8a8886;
+        color: #323130;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    
+    .copy-button:active {
+        background: #edebe9;
+        transform: translateY(0px);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .copy-button.copied {
+        background: #0078d4;
+        color: white;
+        border-color: #0078d4;
+    }
+    
+    .copy-button:focus {
+        outline: 2px solid #0078d4;
+        outline-offset: 2px;
+    }
+    
+    .chat-message.assistant:hover .copy-button,
+    .chat-message.assistant .message-bubble:focus-within .copy-button,
+    .copy-button:focus {
+        display: flex !important;
+    }
+    
+    /* Make sure the button is visible on mobile/touch devices */
+    @media (hover: none) {
+        .chat-message.assistant .copy-button {
+            display: flex;
+            opacity: 0.7;
+        }
+        
+        .chat-message.assistant .copy-button:hover {
+            opacity: 1;
+        }
+    }
+    
+    .copy-icon {
+        width: 12px;
+        height: 12px;
+        fill: currentColor;
+        flex-shrink: 0;
     }
     
     .message-avatar {
@@ -226,6 +299,21 @@
         
         .message-bubble pre {
             background: rgba(255,255,255,0.05);
+        }
+        
+        .copy-button {
+            background: #323130;
+            color: #ffffff;
+            border-color: #605e5c;
+        }
+        
+        .copy-button:hover {
+            background: #484644;
+            border-color: #8a8886;
+        }
+        
+        .copy-button:active {
+            background: #605e5c;
         }
     }
 
@@ -767,5 +855,34 @@
 
 <div id="toast" class="toast hidden"></div>
 <script src="app.js"></script>
+<script>
+// Debug function - you can call this in the browser console
+window.debugCopy = function() {
+    console.log('=== Copy Function Debug ===');
+    console.log('History length:', history?.length || 0);
+    console.log('Navigator clipboard:', !!navigator.clipboard);
+    console.log('Copy functions available:', {
+        copyToClipboard: typeof copyToClipboard,
+        copyToClipboardByIndex: typeof copyToClipboardByIndex,
+        showCopyFeedback: typeof showCopyFeedback
+    });
+    
+    // Test basic clipboard functionality
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText('Debug test').then(() => {
+            console.log('✅ Basic clipboard test successful');
+        }).catch(err => {
+            console.error('❌ Basic clipboard test failed:', err);
+        });
+    }
+    
+    return 'Debug info logged to console';
+};
+
+// Also make functions globally available for debugging
+window.copyToClipboard = copyToClipboard;
+window.copyToClipboardByIndex = copyToClipboardByIndex;
+window.showCopyFeedback = showCopyFeedback;
+</script>
 </body>
 </html>

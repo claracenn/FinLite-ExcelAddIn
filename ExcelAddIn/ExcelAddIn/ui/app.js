@@ -56,7 +56,8 @@ function startNewConversation() {
 
 function renderChatHistory() {
     let html = '';
-    for (const item of history) {
+    for (let i = 0; i < history.length; i++) {
+        const item = history[i];
         if (item.role === 'user') {
             html += `
             <div class="chat-message user">
@@ -78,8 +79,18 @@ function renderChatHistory() {
             html += `
             <div class="chat-message assistant">
                 <div class="message-avatar">FL</div>
-                <div class="message-bubble">
+                <div class="message-bubble" data-index="${i}">
                     ${content}
+                    <button class="copy-button" 
+                            onclick="copyToClipboardByIndex(${i}, this)" 
+                            title="Copy answer to clipboard"
+                            aria-label="Copy this answer to clipboard"
+                            tabindex="0">
+                        <svg class="copy-icon" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2Zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6ZM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2Z"/>
+                        </svg>
+                        Copy
+                    </button>
                 </div>
             </div>`;
         }
@@ -705,3 +716,131 @@ web?.addEventListener('message', (ev) => {
         setSpinner(false);
     }
 });
+
+// Copy to clipboard functionality
+async function copyToClipboardByIndex(messageIndex, buttonElement) {
+    try {
+        console.log('Copying message at index:', messageIndex);
+        
+        const message = history[messageIndex];
+        if (!message || message.role !== 'assistant') {
+            console.error('Invalid message index or not an assistant message');
+            toast('Error: Invalid message');
+            return;
+        }
+        
+        // Get the raw text content
+        let textToCopy = message.text || '';
+        console.log('Text to copy:', textToCopy);
+        
+        // Use the Clipboard API if available
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(textToCopy);
+            console.log('Copied using Clipboard API');
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = textToCopy;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            console.log('Copied using fallback method, successful:', successful);
+        }
+        
+        // Show visual feedback
+        showCopyFeedback(buttonElement);
+        
+        // Show toast notification
+        toast('Answer copied to clipboard!');
+        
+    } catch (error) {
+        console.error('Failed to copy to clipboard:', error);
+        toast('Failed to copy to clipboard');
+    }
+}
+
+async function copyToClipboard(textToCopy, buttonElement) {
+    try {
+        console.log('Legacy copy function called with text:', textToCopy);
+        
+        // Decode HTML entities in the text
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = textToCopy;
+        const decodedText = tempDiv.textContent || tempDiv.innerText || '';
+        
+        // Use the Clipboard API if available
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(decodedText);
+            console.log('Copied using Clipboard API');
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = decodedText;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            console.log('Copied using fallback method, successful:', successful);
+        }
+        
+        // Show visual feedback
+        showCopyFeedback(buttonElement);
+        
+        // Show toast notification
+        toast('Answer copied to clipboard!');
+        
+    } catch (error) {
+        console.error('Failed to copy to clipboard:', error);
+        toast('Failed to copy to clipboard');
+    }
+}
+
+function showCopyFeedback(buttonElement) {
+    if (!buttonElement) {
+        console.error('No button element provided for feedback');
+        return;
+    }
+    
+    console.log('Showing copy feedback');
+    const originalText = buttonElement.innerHTML;
+    const originalTitle = buttonElement.title;
+    
+    buttonElement.classList.add('copied');
+    buttonElement.title = 'Copied to clipboard!';
+    buttonElement.innerHTML = `
+        <svg class="copy-icon" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+        </svg>
+        Copied!
+    `;
+    
+    setTimeout(() => {
+        buttonElement.classList.remove('copied');
+        buttonElement.innerHTML = originalText;
+        buttonElement.title = originalTitle;
+        console.log('Copy feedback reset');
+    }, 2000);
+}
+
+// Test function to verify copy functionality
+function testCopyFunction() {
+    console.log('Testing copy function...');
+    console.log('History array:', history);
+    console.log('Navigator clipboard available:', !!navigator.clipboard);
+    
+    if (history.length > 0) {
+        const lastAssistantMessage = history.filter(msg => msg.role === 'assistant').pop();
+        if (lastAssistantMessage) {
+            console.log('Last assistant message:', lastAssistantMessage);
+        }
+    }
+}
