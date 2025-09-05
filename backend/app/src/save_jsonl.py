@@ -1,3 +1,4 @@
+import os
 import sys, json
 from pathlib import Path
 from request_serializer import serialize_request
@@ -10,7 +11,26 @@ else:
     ROOT = Path(__file__).resolve().parent.parent
 
 cfg = _json.loads((ROOT / "config.json").read_text())
-LOG_PATH = Path(cfg["LOG_JSONL"])
+
+def _default_log_dir() -> Path:
+    env = os.getenv("FINLITE_LOG_DIR")
+    if env:
+        p = Path(os.path.expandvars(env)).expanduser()
+    else:
+        base = os.getenv("LOCALAPPDATA") or str(Path.home())
+        p = Path(base) / "FinLite" / "logs"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+raw = cfg.get("LOG_JSONL", "requests.jsonl")
+raw = os.path.expandvars(raw)
+candidate = Path(raw).expanduser()
+
+if candidate.is_absolute():
+    LOG_PATH = candidate
+else:
+    LOG_PATH = _default_log_dir() / (candidate.name or "requests.jsonl")
+
 LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 def save_interaction(
