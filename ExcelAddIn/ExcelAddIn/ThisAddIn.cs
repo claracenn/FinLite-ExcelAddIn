@@ -15,6 +15,10 @@ namespace ExcelAddIn
         private CustomTaskPane _pane;
         private WebView2Pane _control;
 
+        // Public properties for Ribbon access
+        public CustomTaskPane TaskPane => _pane;
+        public WebView2Pane WebView2Control => _control;
+
         private async void ThisAddIn_Startup(object sender, System.EventArgs e)
         {
             try
