@@ -29,9 +29,14 @@ candidate = Path(raw).expanduser()
 if candidate.is_absolute():
     LOG_PATH = candidate
 else:
-    LOG_PATH = _default_log_dir() / (candidate.name or "requests.jsonl")
+    LOG_PATH = _default_log_dir() / raw
 
-LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+try:
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+except Exception as e:
+    print(f"Warning: Could not create log directory {LOG_PATH.parent}: {e}")
+    LOG_PATH = _default_log_dir() / "requests.jsonl"
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 def save_interaction(
     prompt: str,
