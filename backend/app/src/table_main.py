@@ -51,11 +51,13 @@ def get_current_chunks() -> list[str]:
     return _current_chunks
 
 if __name__ == "__main__":
-    
-    chunks = load_excel_data(str(ROOT / EXCEL_FILE))
-    print(f"Building FAISS index for {len(chunks)} snippets...")
-    build_index(chunks)
-    print("Index built successfully!")
+    if EXCEL_FILE and (ROOT / EXCEL_FILE).exists():
+        chunks = load_excel_data(str(ROOT / EXCEL_FILE))
+        print(f"Building FAISS index for {len(chunks)} snippets...")
+        build_index(chunks)
+        print("Index built successfully!")
+    else:
+        print("No default Excel file configured or file doesn't exist.")
     exit(0)
 
 
@@ -173,9 +175,8 @@ def rag_pipeline(prompt: str, detailed: bool = False, k: int | None = None) -> t
     k = k or K
 
     chunks = get_current_chunks()
-
     if not chunks:
-        return [], "No data available. Please load an Excel file first."
+        return [], "No workbook data available. Please re-open and initialize the Excel file."
     
     _ = load_index() 
     idxs, selected, best_score = retrieve_with_fallback(
@@ -185,11 +186,9 @@ def rag_pipeline(prompt: str, detailed: bool = False, k: int | None = None) -> t
         answer_threshold=ANSWERABILITY_THRESHOLD,
     )
 
-    # If retrieval failed or evidence too weak, return standardized fallback
     if not selected:
         return [], "Insufficient evidence. Please provide more context or initialize data first."
-
-    # Additional lightweight evidence coverage gate using query coverage
+        
     STOP = {
         "the","a","an","is","are","to","of","and","in","on","for","by","with","at","from","as","it","this","that","be","or",
         "what","which","who","whom","whose","when","where","why","how"

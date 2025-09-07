@@ -9,7 +9,6 @@ namespace CopyBackend
         {
             try
             {
-                // Check for cleanup command
                 if (args != null && args.Length > 0 && args[0].Equals("--cleanup", StringComparison.OrdinalIgnoreCase))
                 {
                     Log("[CLEANUP] Performing FinLite data cleanup...");
@@ -17,7 +16,6 @@ namespace CopyBackend
                     return 0;
                 }
 
-                // Check for cleanup flag creation
                 if (args != null && args.Length > 0 && args[0].Equals("--create-cleanup-flag", StringComparison.OrdinalIgnoreCase))
                 {
                     Log("[CLEANUP] Creating cleanup flag...");

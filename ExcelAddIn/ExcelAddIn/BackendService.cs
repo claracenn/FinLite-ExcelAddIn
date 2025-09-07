@@ -18,7 +18,6 @@ namespace ExcelAddIn
         {
             try
             {
-        // Probe for an already-running backend before spawning
         if (await IsHealthyAsync(TimeSpan.FromSeconds(2))) return;
 
                 lock (_gate)
@@ -43,7 +42,6 @@ namespace ExcelAddIn
 
                     if (exePath == null)
                     {
-                        // Fallback: try python runner if present
                         var pyExe = Path.Combine(backendDir, "pyembed", "python.exe");
                         var runPy = Path.Combine(backendDir, "app", "run_server.py");
                         Trace.WriteLine($"[FinLite] Backend exe not found. Trying python fallback: py={pyExe}, script={runPy}");
@@ -85,7 +83,6 @@ namespace ExcelAddIn
                     }
                 }
 
-                // Wait for health
                 var healthy = await IsHealthyAsync(TimeSpan.FromSeconds(15));
         Trace.WriteLine($"[FinLite] Backend health: {healthy}");
             }
@@ -112,7 +109,6 @@ namespace ExcelAddIn
                     _proc = null;
                 }
 
-                // Kill by pid file as a safety net (if process handle was lost)
                 try
                 {
                     var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FinLite", "logs");
@@ -198,13 +194,10 @@ namespace ExcelAddIn
                 {
                     Trace.WriteLine($"[FinLite] Cleaning up local data directory: {finLiteDir}");
 
-                    // Stop backend first to release any file locks
                     Stop();
 
-                    // Wait a bit for processes to fully terminate
                     System.Threading.Thread.Sleep(1000);
 
-                    // Try to delete the entire FinLite directory
                     try
                     {
                         Directory.Delete(finLiteDir, true);

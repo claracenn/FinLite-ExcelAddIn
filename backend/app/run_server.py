@@ -51,7 +51,6 @@ def _log_dir() -> Path:
         return Path(base) / "FinLite" / "logs"
     return Path.cwd() / "logs"
 
-# Configure server logger
 _LOG_DIR = _log_dir()
 _LOG_DIR.mkdir(parents=True, exist_ok=True)
 server_logger = logging.getLogger("server")
@@ -201,19 +200,15 @@ async def speech_to_text(audio_file: UploadFile = File(...)):
     Convert speech audio file to text using faster-whisper
     """
     try:
-        # Read the uploaded audio file
         audio_data = await audio_file.read()
         
-        # Create a temporary file to store the audio
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
             temp_file.write(audio_data)
             temp_file_path = temp_file.name
         
         try:
-            # Get the Whisper model
             model = get_whisper_model()
             
-            # Run transcription in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
             
             def transcribe_audio():
@@ -231,7 +226,6 @@ async def speech_to_text(audio_file: UploadFile = File(...)):
             return SpeechResponse(text=text)
             
         finally:
-            # Clean up temporary file
             try:
                 os.unlink(temp_file_path)
             except:
@@ -385,7 +379,6 @@ async def chat(req: ChatRequest):
     """
     try:
         if req.snippets:
-            # Cell selected, use selected snippet + RAG
             loop = asyncio.get_event_loop()
             selected_chunks, _ = await loop.run_in_executor(executor, rag_pipeline, req.prompt, req.detailed)
             
@@ -405,9 +398,11 @@ async def chat(req: ChatRequest):
             used_snippets = combined_snippets
         
         else:
-            # No specific cell selection, try RAG with full index
             loop = asyncio.get_event_loop()
             selected_chunks, raw = await loop.run_in_executor(executor, rag_pipeline, req.prompt, req.detailed)
+            
+            if not selected_chunks and "No workbook data available" in raw:
+                raise HTTPException(status_code=400, detail="No workbook has been initialized. Please re-open the Excel file.")
             
             if selected_chunks:
                 answer = trim_to_first_answer(raw)
@@ -418,7 +413,6 @@ async def chat(req: ChatRequest):
         
         original_prompt = extract_original_prompt(req.prompt)
         
-        # Save interaction with the actually used snippets
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
             executor,
