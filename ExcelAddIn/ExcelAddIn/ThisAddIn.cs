@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Office = Microsoft.Office.Core;
 using Microsoft.Office.Tools;
 using System.Windows.Forms;
 using Excel = Microsoft.Office.Interop.Excel;
+using Microsoft.Win32;
 
 namespace ExcelAddIn
 {
@@ -28,7 +30,6 @@ namespace ExcelAddIn
                 _pane = this.CustomTaskPanes.Add(_control, "FinLite");
                 _pane.Visible = true;
 
-                // Ensure backend is running (spawns run_server.exe if needed)
                 Trace.WriteLine("[FinLite] Starting backend service");
                 await BackendService.EnsureStartedAsync();
 
@@ -82,7 +83,6 @@ namespace ExcelAddIn
             {
                 Trace.WriteLine($"[FinLite][Error] Add-in startup error: {ex}");
                 MessageBox.Show("FinLite add-in failed to load:\n" + ex.Message, "FinLite", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                // Do not rethrow to prevent Excel from disabling the add-in
             }
         }
         private void ThisAddIn_Shutdown(object sender, System.EventArgs e)
@@ -92,11 +92,62 @@ namespace ExcelAddIn
                 Application.SheetSelectionChange -= OnSelectionChange;
                 Application.WorkbookActivate -= OnWorkbookActivate;
                 BackendService.Stop();
+                
+                if (ShouldCleanupLocalData())
+                {
+                    Trace.WriteLine("[FinLite] Cleaning up local data during shutdown");
+                    BackendService.CleanupLocalData();
+                }
+                
                 Trace.WriteLine("[FinLite] Add-in shutdown complete");
             }
             catch (Exception ex)
             {
                 Trace.WriteLine($"[FinLite][Error] Add-in shutdown error: {ex}");
+            }
+        }
+
+        private bool ShouldCleanupLocalData()
+        {
+            try
+            {
+                var flagPath = Path.Combine(Path.GetTempPath(), "FinLite_Cleanup.flag");
+                if (File.Exists(flagPath))
+                {
+                    Trace.WriteLine("[FinLite] Cleanup flag found, proceeding with data cleanup");
+                    try { File.Delete(flagPath); } catch { }
+                    return true;
+                }
+
+                var currentDir = AppDomain.CurrentDomain.BaseDirectory;
+                var tempPaths = new[] { 
+                    Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) + "\\Temp",
+                    Path.GetTempPath(),
+                    Environment.GetEnvironmentVariable("TEMP"),
+                    Environment.GetEnvironmentVariable("TMP")
+                };
+                
+                bool isInTempDir = tempPaths.Any(temp => !string.IsNullOrEmpty(temp) && 
+                    currentDir.StartsWith(temp, StringComparison.OrdinalIgnoreCase));
+                
+                if (isInTempDir)
+                {
+                    var msiProcesses = Process.GetProcessesByName("msiexec");
+                    var setupProcesses = Process.GetProcessesByName("setup");
+                    
+                    if (msiProcesses.Length > 0 || setupProcesses.Length > 0)
+                    {
+                        Trace.WriteLine("[FinLite] Running from temp directory during installer process, proceeding with cleanup");
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[FinLite] Error checking cleanup conditions: {ex.Message}");
+                return false;
             }
         }
 

@@ -296,7 +296,9 @@
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
     <Compile Include="BackendService.cs" />
-    <Compile Include="FinLiteRibbon.cs" />
+    <Compile Include="FinLiteRibbon.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="FinLiteRibbon.Designer.cs">
       <DependentUpon>FinLiteRibbon.cs</DependentUpon>
     </Compile>
@@ -338,6 +340,11 @@
       <Visible>False</Visible>
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.WebView2">
+      <Visible>False</Visible>
+      <ProductName>Microsoft Edge WebView2 Runtime</ProductName>
+      <Install>true</Install>
     </BootstrapperPackage>
   </ItemGroup>
   <PropertyGroup>

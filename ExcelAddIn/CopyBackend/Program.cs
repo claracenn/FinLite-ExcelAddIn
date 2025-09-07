@@ -9,9 +9,27 @@ namespace CopyBackend
         {
             try
             {
+                // Check for cleanup command
+                if (args != null && args.Length > 0 && args[0].Equals("--cleanup", StringComparison.OrdinalIgnoreCase))
+                {
+                    Log("[CLEANUP] Performing FinLite data cleanup...");
+                    CleanupHelper.PerformCleanup();
+                    return 0;
+                }
+
+                // Check for cleanup flag creation
+                if (args != null && args.Length > 0 && args[0].Equals("--create-cleanup-flag", StringComparison.OrdinalIgnoreCase))
+                {
+                    Log("[CLEANUP] Creating cleanup flag...");
+                    CleanupHelper.CreateCleanupFlag();
+                    return 0;
+                }
+
                 if (args == null || args.Length < 2)
                 {
                     Log("[ERROR] Not enough args. Expect: <MSI_or_SourceDir> <InstallDir>");
+                    Log("        Or use: --cleanup to clean FinLite data");
+                    Log("        Or use: --create-cleanup-flag to create cleanup flag");
                     return 2;
                 }
 

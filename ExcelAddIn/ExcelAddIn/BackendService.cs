@@ -1,13 +1,14 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace ExcelAddIn
 {
-    internal static class BackendService
+    public static class BackendService
     {
         private static readonly object _gate = new object();
         private static Process _proc;
@@ -187,5 +188,94 @@ namespace ExcelAddIn
         }
 
         private static string Quote(string s) => s.Contains(" ") ? $"\"{s}\"" : s;
+
+        public static void CleanupLocalData()
+        {
+            try
+            {
+                var finLiteDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FinLite");
+                if (Directory.Exists(finLiteDir))
+                {
+                    Trace.WriteLine($"[FinLite] Cleaning up local data directory: {finLiteDir}");
+
+                    // Stop backend first to release any file locks
+                    Stop();
+
+                    // Wait a bit for processes to fully terminate
+                    System.Threading.Thread.Sleep(1000);
+
+                    // Try to delete the entire FinLite directory
+                    try
+                    {
+                        Directory.Delete(finLiteDir, true);
+                        Trace.WriteLine("[FinLite] Successfully cleaned up local data");
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        Trace.WriteLine("[FinLite] Direct deletion failed, trying individual file cleanup");
+                        CleanupDirectoryContents(finLiteDir);
+                    }
+                    catch (IOException ex)
+                    {
+                        Trace.WriteLine($"[FinLite] IO error during cleanup: {ex.Message}");
+                        CleanupDirectoryContents(finLiteDir);
+                    }
+                }
+                else
+                {
+                    Trace.WriteLine("[FinLite] No local data directory found to clean up");
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[FinLite][Error] Failed to cleanup local data: {ex.Message}");
+            }
+        }
+
+        private static void CleanupDirectoryContents(string dirPath)
+        {
+            try
+            {
+                if (!Directory.Exists(dirPath)) return;
+
+                foreach (var file in Directory.GetFiles(dirPath, "*", SearchOption.AllDirectories))
+                {
+                    try
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                        File.Delete(file);
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.WriteLine($"[FinLite] Failed to delete file {file}: {ex.Message}");
+                    }
+                }
+
+                foreach (var dir in Directory.GetDirectories(dirPath, "*", SearchOption.AllDirectories).OrderByDescending(d => d.Length))
+                {
+                    try
+                    {
+                        Directory.Delete(dir, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.WriteLine($"[FinLite] Failed to delete directory {dir}: {ex.Message}");
+                    }
+                }
+
+                try
+                {
+                    Directory.Delete(dirPath, false);
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"[FinLite] Failed to delete root directory {dirPath}: {ex.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[FinLite][Error] Error during directory contents cleanup: {ex.Message}");
+            }
+        }
     }
 }
